@@ -1,0 +1,26 @@
+{
+  "name": "netivo/wp-core",
+  "description": "WP Core Library for Netivo themes",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "version": "1.0",
+  "authors": [
+    {
+      "name": "netivo",
+      "email": "biuro@netivo.pl"
+    },
+    {
+      "name": "Michał Świątek",
+      "email": "michal.swiatek@netivo.pl"
+    }
+  ],
+  "require": {
+    "php": ">=8.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "Netivo\\Core\\": "src/Core",
+      "Netivo\\Module\\": "src/Module"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Michal
+ * Date: 11.10.2018
+ * Time: 13:27
+ *
+ * @package Netivo/Admin
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	header( 'HTTP/1.0 403 Forbidden' );
+	exit;
+}
+
+?>
+
+<div class="wrap">
+	<h1 class="main-title"><?php echo $this->title; ?></h1>
+	<?php if(isset($_GET['success'])) : ?>
+		<div class="notice updated">
+			<?= (!empty($_GET['success'])) ? $_GET['success'] : 'Zapisano pomyślnie!'; ?>
+		</div>
+	<?php endif; ?>
+	<?php if(isset($_GET['error'])) : ?>
+		<div class="notice error">
+			<?= (!empty($_GET['error'])) ? $_GET['error'] : 'Wystąpił błąd!'; ?>
+		</div>
+	<?php endif; ?>
+	
+	<?php $this->content(); ?>
+	
+</div>
