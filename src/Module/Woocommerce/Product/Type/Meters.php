@@ -21,7 +21,7 @@ class Meters extends \WC_Product_Simple {
 	/**
 	 * Registers new product type.
 	 */
-	public static function register() {
+	public static function register(): void {
 
 		add_filter( 'woocommerce_product_class', [ self::class, 'product_class' ], 10, 4 );
 		add_filter( 'woocommerce_product_get_price', [ self::class, 'change_price' ], 10, 2 );
@@ -133,7 +133,7 @@ class Meters extends \WC_Product_Simple {
 	public static function display_price_options(): void {
 		global $post, $thepostid, $product_object;
 
-		$filename = get_stylesheet_directory() . '/Netivo/Elazienki/Theme/Admin/views/woocommerce/product/tabs/meters-settings.phtml';
+		$filename = __DIR__ . '/Netivo/Elazienki/Theme/Admin/views/woocommerce/product/tabs/meters-settings.phtml';
 		wp_nonce_field( 'save_product_meters' ,'product_meters_nonce' );
 
 		include $filename;
