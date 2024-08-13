@@ -37,6 +37,10 @@ class Package extends WC_Product_Simple {
 		add_filter( 'product_type_selector', [ self::class, 'add_to_select' ] );
 
 		if ( is_admin() ) {
+			add_filter('woocommerce_product_data_tabs', [self::class, 'add_tab']);
+			add_action('woocommerce_product_data_panels', [self::class, 'display']);
+			add_action( 'save_post', [ self::class, 'do_save' ] );
+
 			add_filter( 'woocommerce_product_data_tabs', [ self::class, 'modify_pricing_tab' ] );
 			add_action( 'admin_footer', [ self::class, 'admin_footer_js' ] );
 		}
@@ -103,6 +107,74 @@ class Package extends WC_Product_Simple {
 		</script><?php
 
 	}
+
+	/**
+	 * Adds tab to product data metabox.
+	 *
+	 * @param array $tabs Current tabs in product data metabox.
+	 *
+	 * @return array
+	 */
+	public static function add_tab( array $tabs): array {
+		$tabs['package'] = array(
+			'label'    => __('Ustawienia zestawu', 'netivo'),
+			'target'   => 'nt_package_product_data',
+			'class'    => array( '' ),
+			'priority' => 15,
+		);
+		return $tabs;
+	}
+
+	/**
+	 * Displays the tab content.
+	 *
+	 * @throws \Exception When error.
+	 */
+	public static function display(): void {
+		global $post, $thepostid, $product_object;
+		$filename = __DIR__ . '/../../../../../views/woocommerce/product/type/package.phtml';
+
+		if ( file_exists( $filename ) ) {
+			echo '<div id="nt_package_product_data" class="panel woocommerce_options_panel">';
+			include $filename;
+			echo '</div>';
+		} else {
+			throw new \Exception( "There is no view file for this admin action" );
+		}
+
+	}
+
+	/**
+	 * Start saving process of the metabox.
+	 *
+	 * @param int $post_id Id of the saved post.
+	 *
+	 * @return mixed
+	 */
+	public static function do_save( int $post_id ): mixed {
+		if ( ! isset( $_POST[ 'product_package_tab_nonce' ] ) ) {
+			return $post_id;
+		}
+		if ( ! wp_verify_nonce( $_POST[ 'product_package_tab_nonce' ], 'save_product_package_tab' ) ) {
+			return $post_id;
+		}
+		if ( ! in_array( $_POST['post_type'], ['product'] ) ) {
+			return $post_id;
+		}
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return $post_id;
+		}
+
+		$products = $_POST['_package_products_field'];
+
+		delete_post_meta($post_id, '_nt_package_product');
+		if(!empty($products)){
+			foreach ($products as $product => $amount){
+				add_post_meta($post_id, '_nt_package_product', array('product' => $product, 'amount' => $amount));
+			}
+		}
+	}
+
 	/**
 	 * Add to cart view for package product type.
 	 */

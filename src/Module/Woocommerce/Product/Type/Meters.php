@@ -133,7 +133,7 @@ class Meters extends \WC_Product_Simple {
 	public static function display_price_options(): void {
 		global $post, $thepostid, $product_object;
 
-		$filename = __DIR__ . '/Netivo/Elazienki/Theme/Admin/views/woocommerce/product/tabs/meters-settings.phtml';
+		$filename = __DIR__ . '/../../../../../views/woocommerce/product/type/meters-settings.phtml';
 		wp_nonce_field( 'save_product_meters' ,'product_meters_nonce' );
 
 		include $filename;
