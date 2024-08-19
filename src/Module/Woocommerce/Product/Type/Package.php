@@ -33,7 +33,7 @@ class Package extends WC_Product_Simple {
 		add_filter( 'woocommerce_product_get_regular_price', [ self::class, 'change_price' ], 10, 2 );
 		add_filter( 'woocommerce_product_get_sale_price', [ self::class, 'change_price' ], 10, 2 );
 
-		add_action( 'woocommerce_checkout_create_order', [ self::class, 'save_order' ] );
+		add_action( 'woocommerce_checkout_order_created', [ self::class, 'save_order' ] );
 		add_filter( 'product_type_selector', [ self::class, 'add_to_select' ] );
 
 		if ( is_admin() ) {
@@ -214,8 +214,8 @@ class Package extends WC_Product_Simple {
 	 *
 	 * @param \WC_Order $order Order to save.
 	 */
-	public static function save_order( $order ): void {
-		foreach ( $order->get_items() as $item ) {
+	public static function save_order( \WC_Order $order ): void {
+		foreach ( $order->get_items() as $key => $item ) {
 			if ( $item->get_type() == 'line_item' ) {
 				/**
 				 * @var $item \WC_Order_Item_Product
@@ -226,15 +226,29 @@ class Package extends WC_Product_Simple {
 					$summed_price = self::change_price(0, $prod);
 					$package_products = $prod->get_package_products();
 					foreach($package_products as $package_product){
-						$prop = $package_product['product']->get_price() / $summed_price;
 						$proportions[$package_product['product']->get_id()] = $package_product['product']->get_price() / $summed_price;
-
 					}
-					$item->add_meta_data('_nt_package_proportions', $proportions);
-					$item->save_meta_data();
+					foreach($package_products as $package_product) {
+						$pr       = $package_product['product'];
+						$qty      = $item->get_quantity( 'data' ) * (float) $package_product['amount'];
+						$subtotal = $proportions[ $pr->get_id() ] * $order->get_item_subtotal( $item );
+
+						$nitem = new \WC_Order_Item_Product();
+						$nitem->set_name( $pr->get_name() );
+						$nitem->set_quantity( $qty );
+						$nitem->set_product( $pr );
+						$nitem->set_subtotal( round( $qty * $subtotal, 2 ) );
+						$nitem->set_subtotal_tax( 0 );
+						$nitem->set_total( round( $qty * $subtotal, 2 ) );
+						$nitem->set_total_tax( 0 );
+
+						$order->add_item( $nitem );
+					}
+					$order->remove_item($key);
 				}
 			}
 		}
+		$order->save();
 	}
 
 
