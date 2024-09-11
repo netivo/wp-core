@@ -71,12 +71,12 @@ class Meters extends \WC_Product_Simple {
 	/**
 	 * Gets the price for product.
 	 *
-	 * @param float $price   Price to get from.
+	 * @param string $price   Price to get from.
 	 * @param \WC_Product $product Product to get price from.
 	 *
-	 * @return float
+	 * @return string
 	 */
-	public static function change_price( float $price, \WC_Product $product ): float {
+	public static function change_price( string $price, \WC_Product $product ): string {
 	    if(!empty($price)) {
 		    if ( $product->get_type() == 'meters' && ! is_admin() ) {
 			    $meters = $product->get_meta( '_meters_in_box' );
