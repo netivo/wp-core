@@ -147,7 +147,7 @@ class Meters extends \WC_Product_Simple {
 	 *
 	 * @return int
 	 */
-	public static function product_data_save( int $post_id ) : mixed {
+	public static function product_data_save( int $post_id ) : int {
 		if ( ! isset( $_POST[ 'product_meters_nonce' ] ) ) {
 			return $post_id;
 		}
@@ -170,6 +170,7 @@ class Meters extends \WC_Product_Simple {
 		} else {
 			delete_post_meta( $post_id, '_items_in_box' );
 		}
+        return $post_id;
 	}
 
 	/**

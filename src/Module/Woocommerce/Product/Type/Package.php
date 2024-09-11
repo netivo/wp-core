@@ -149,9 +149,9 @@ class Package extends WC_Product_Simple {
 	 *
 	 * @param int $post_id Id of the saved post.
 	 *
-	 * @return mixed
+	 * @return int
 	 */
-	public static function do_save( int $post_id ): mixed {
+	public static function do_save( int $post_id ): int {
 		if ( ! isset( $_POST[ 'product_package_tab_nonce' ] ) ) {
 			return $post_id;
 		}
@@ -173,6 +173,7 @@ class Package extends WC_Product_Simple {
 				add_post_meta($post_id, '_nt_package_product', array('product' => $product, 'amount' => $amount));
 			}
 		}
+        return $post_id;
 	}
 
 	/**
