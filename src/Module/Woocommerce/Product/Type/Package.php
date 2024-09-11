@@ -185,12 +185,12 @@ class Package extends WC_Product_Simple {
 	/**
 	 * Gets the price for product.
 	 *
-	 * @param float $price   Price to get from.
+	 * @param string $price   Price to get from.
 	 * @param \WC_Product $product Product to get price from.
 	 *
-	 * @return float
+	 * @return string
 	 */
-	public static function change_price( float $price, \WC_Product $product ): float|int {
+	public static function change_price( string $price, \WC_Product $product ): string {
 		if ( $product->get_type() == 'package' && ! (is_admin() && !wp_doing_ajax()) ) {
 			if(!empty($price)) return $price;
 			$pr_price = 0;
@@ -200,7 +200,7 @@ class Package extends WC_Product_Simple {
 					$dp = $package_product->value;
 					$pr = wc_get_product($dp['product']);
 					if(!empty($pr)){
-						$pr_price += $pr->get_price('normal') * (float)$dp['amount'];
+						$pr_price += (float)$pr->get_price('normal') * (float)$dp['amount'];
 					}
 				}
 			}
