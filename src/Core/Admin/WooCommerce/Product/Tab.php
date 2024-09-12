@@ -113,11 +113,11 @@ abstract class Tab {
 	/**
 	 * Start saving process of the metabox.
 	 *
-	 * @param int $post_id Id of the saved post.
+	 * @param string $post_id Id of the saved post.
 	 *
 	 * @return mixed
 	 */
-	public function do_save( int $post_id ): mixed {
+	public function do_save( string $post_id ): mixed {
 		if ( get_post_type($post_id) !== 'product' ) {
 			return $post_id;
 		}

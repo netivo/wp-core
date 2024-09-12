@@ -165,14 +165,19 @@ class Package extends WC_Product_Simple {
 			return $post_id;
 		}
 
-		$products = $_POST['_package_products_field'];
+        if(isset($_POST['_package_products_field'])) {
+	        $products = $_POST['_package_products_field'];
 
-		delete_post_meta($post_id, '_nt_package_product');
-		if(!empty($products)){
-			foreach ($products as $product => $amount){
-				add_post_meta($post_id, '_nt_package_product', array('product' => $product, 'amount' => $amount));
-			}
-		}
+	        delete_post_meta( $post_id, '_nt_package_product' );
+	        if ( ! empty( $products ) ) {
+		        foreach ( $products as $product => $amount ) {
+			        add_post_meta( $post_id, '_nt_package_product', array(
+				        'product' => $product,
+				        'amount'  => $amount
+			        ) );
+		        }
+	        }
+        }
         return $post_id;
 	}
 
