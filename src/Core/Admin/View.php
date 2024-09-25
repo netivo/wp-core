@@ -48,7 +48,7 @@ class View {
 	 * @throws \Exception When error.
 	 */
 	protected function render(): void {
-		require __FILE__ . '/../../../views/layout.phtml';
+		require __DIR__ . '/../../../views/layout.phtml';
 	}
 
 	/**

@@ -5,7 +5,7 @@ namespace Netivo\Module\Woocommerce\Widget;
 use Automattic\WooCommerce\Internal\ProductAttributesLookup\Filterer;
 use WC_Query;
 use WP_Meta_Query;
-use WP_Term_Query;
+use WP_Term_Query;use WP_Widget;
 
 class Filters extends WP_Widget {
 	public function __construct() {
@@ -19,8 +19,9 @@ class Filters extends WP_Widget {
 	 *
 	 * @return void
 	 */
-	public function form( array $instance ): void {
+	public function form( $instance ) {
 		$values = ( isset( $instance['filters'] ) ) ? $instance['filters'] : [];
+        $form = (isset($instance['form'])) ? $instance['form'] : false;
 		if ( function_exists( 'WC' ) ) {
 			?>
             <p>
@@ -42,6 +43,11 @@ class Filters extends WP_Widget {
                     </option>
                 </select>
             </p>
+            <p>
+                <label for="<?php echo esc_attr( $this->get_field_id( 'form' ) ); ?>">
+                    <input type="checkbox" name="<?php echo esc_attr( $this->get_field_name( 'form' ) ); ?>" value="1" <?php echo ($form) ? 'checked' : ''; ?>/> Zatwierdzanie przyciskiem
+                </label>
+            </p>
 			<?php
 		} else {
 			echo '<p>Aby włączyć filtry produktrowe, musisz mieć aktywną wtyczkę WooCommerce.</p>';
@@ -56,9 +62,10 @@ class Filters extends WP_Widget {
 	 *
 	 * @return array
 	 */
-	public function update( array $new_instance, array $old_instance ): array {
+	public function update( $new_instance, $old_instance ) {
 		$instance            = $old_instance;
 		$instance['filters'] = $new_instance['filters'];
+		$instance['form'] = ($new_instance['form'] == 1);
 
 		return $instance;
 	}
@@ -72,11 +79,14 @@ class Filters extends WP_Widget {
 	 * @see WP_Widget
 	 *
 	 */
-	public function widget( array $args, array $instance ): void {
+	public function widget( $args, $instance ) {
 		global $wp;
 		if ( empty( $instance['filters'] ) ) {
 			return;
 		}
+
+        $form = (!empty($instance['form']));
+
 
 		$show_categories   = in_array( 'category', $instance['filters'] );
 		$show_attributes   = in_array( 'attributes', $instance['filters'] );
@@ -96,7 +106,11 @@ class Filters extends WP_Widget {
 		}
 
 		?>
-        <div class="netivo-filters js-filter-box">
+        <?php if($form) : ?>
+            <form method="get" class="netivo-filters js-filter-box">
+        <?php else : ?>
+            <div class="netivo-filters js-filter-box">
+        <?php endif; ?>
 			<?php if ( $show_categories ) : ?>
 				<?php $this->print_category_filter(); ?>
 			<?php endif; ?>
@@ -109,7 +123,12 @@ class Filters extends WP_Widget {
 			<?php if ( $show_attributes ) : ?>
 				<?php $this->print_attributes_filter(); ?>
 			<?php endif; ?>
-        </div>
+		<?php if($form) : ?>
+            <button type="submit" class="netivo-filters__button"><?php echo __('Filtruj', 'netivo'); ?></button>
+            </form>
+        <?php else : ?>
+            </div>
+        <?php endif; ?>
 		<?php
 	}
 
@@ -364,6 +383,7 @@ class Filters extends WP_Widget {
 		}
 		$result_array['filter_name']         = $attribute_array[ $attribute ];
 		$result_array['input_name']          = $filter_name;
+		$result_array['taxonomy']            = $taxonomy;
 		$result_array['filter_option_count'] = $tmp_option_count;
 		$result_array['count_show']          = ( $tmp_option_active_count < 5 ) ? 5 : 8;
 		$result_array['options_active']      = $tmp_options_active;
@@ -415,6 +435,8 @@ class Filters extends WP_Widget {
 			];
 			$options[] = $option;
 		}
+
+        $options = apply_filters('netivo/widget/filters/availability-options', $options);
 
 		wc_get_template( 'widget/filters-availability.php', [ 'filters' => $options ] );
 	}
