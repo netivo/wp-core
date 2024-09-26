@@ -84,9 +84,9 @@ abstract class Page {
 	 *
 	 * Ignored when subpage or tab
 	 *
-	 * @var string|null
+	 * @var int|null
 	 */
-	protected ?string $_position = null;
+	protected ?int $_position = null;
 
 	/**
 	 * The slug name for the parent element (or the file name of a standard WordPress admin page).

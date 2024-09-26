@@ -544,6 +544,21 @@ class Filters extends WP_Widget {
 			$children[] = $term_id;
 		}
 
+        $is_man = false;
+		if ( is_product_category() ) {
+			$kpr = get_query_var('kpr');
+			if(!empty($kpr)){
+				$term = get_term_by('slug', $kpr, 'pa_producent');
+				if(!empty($term)){
+					$is_man = true;
+					$man_id = $term->term_id;
+				}
+			}
+		} elseif (is_tax('pa_producent')){
+            $is_man = true;
+            $man_id = get_queried_object_id();
+        }
+
 		$meta_query     = WC_Query::get_main_meta_query();
 		$meta_query     = new WP_Meta_Query( $meta_query );
 		$meta_query_sql = $meta_query->get_sql( 'post', $wpdb->posts, 'ID' );
@@ -557,6 +572,11 @@ class Filters extends WP_Widget {
 		$query['where'] = "WHERE {$wpdb->posts}.post_type IN ( 'product' ) 
 		                   AND {$wpdb->posts}.post_status = 'publish' 
 		                   AND term_relationships.term_taxonomy_id IN (" . implode( ',', $children ) . ") ";
+
+        if( $is_man ) {
+            $query['join'] .= " LEFT JOIN {$wpdb->term_relationships} AS term_relationships_manufacturer ON {$wpdb->posts}.ID = term_relationships_manufacturer.object_id ";
+			$query['where'] .= " AND term_relationships_manufacturer.term_taxonomy_id IN (".$man_id.") ";
+        }
 
 		if ( ! empty( $alt_id ) ) {
 			$query['join']  .= "LEFT JOIN {$wpdb->term_relationships} AS term_relationships_alt ON {$wpdb->posts}.ID = term_relationships_alt.object_id ";
