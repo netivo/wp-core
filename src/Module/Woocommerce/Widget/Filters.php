@@ -5,7 +5,7 @@ namespace Netivo\Module\Woocommerce\Widget;
 use Automattic\WooCommerce\Internal\ProductAttributesLookup\Filterer;
 use WC_Query;
 use WP_Meta_Query;
-use WP_Term_Query;use WP_Widget;
+use WP_Tax_Query;use WP_Term_Query;use WP_Widget;
 
 class Filters extends WP_Widget {
 	public function __construct() {
@@ -40,6 +40,9 @@ class Filters extends WP_Widget {
                     </option>
                     <option value="attributes" <?php echo ( ! empty( $values ) && in_array( 'attributes', $values ) ) ? 'selected' : ''; ?>>
                         Atrybuty
+                    </option>
+                    <option value="price" <?php echo ( ! empty( $values ) && in_array( 'price', $values ) ) ? 'selected' : ''; ?>>
+                        Cena
                     </option>
                 </select>
             </p>
@@ -92,8 +95,9 @@ class Filters extends WP_Widget {
 		$show_attributes   = in_array( 'attributes', $instance['filters'] );
 		$show_availability = in_array( 'availability', $instance['filters'] );
 		$show_promotion    = in_array( 'promotion', $instance['filters'] );
+		$show_price        = in_array( 'price', $instance['filters'] );
 
-		if ( ! $show_categories && ! $show_attributes && ! $show_availability && ! $show_promotion ) {
+		if ( ! $show_categories && ! $show_attributes && ! $show_availability && ! $show_promotion && !$show_price ) {
 			return;
 		}
 
@@ -123,7 +127,13 @@ class Filters extends WP_Widget {
 			<?php if ( $show_attributes ) : ?>
 				<?php $this->print_attributes_filter(); ?>
 			<?php endif; ?>
+			<?php if ( $show_price ) : ?>
+				<?php $this->print_price_filter(); ?>
+			<?php endif; ?>
 		<?php if($form) : ?>
+		    <?php if(!empty($_GET['s'])) : ?>
+                <input type="hidden" name="s" value="<?= $_GET['s']; ?>"/>
+            <?php endif; ?>
             <button type="submit" class="netivo-filters__button"><?php echo __('Filtruj', 'netivo'); ?></button>
             </form>
         <?php else : ?>
@@ -484,6 +494,42 @@ class Filters extends WP_Widget {
 		wc_get_template( 'widget/filters-promotion.php', [ 'filters' => $options ] );
 	}
 
+    public function print_price_filter(): void {
+        $prices = $this->get_filtered_price();
+        $min    = floor( $prices->min_price );
+        $max    = ceil( $prices->max_price );
+
+        $min_price = isset( $_GET['min_price'] ) ? wc_clean( wp_unslash( $_GET['min_price'] ) ) : apply_filters( 'woocommerce_price_filter_widget_min_amount', $min ); // WPCS: input var ok, CSRF ok.
+        $max_price = isset( $_GET['max_price'] ) ? wc_clean( wp_unslash( $_GET['max_price'] ) ) : apply_filters( 'woocommerce_price_filter_widget_max_amount', $max ); // WPCS: input var ok, CSRF ok.
+
+        $ignore = ['min_price', 'max_price'];
+        foreach(get_option('_nt_attributes', []) as $att){
+            $ignore[] = 'query_type_'.$att;
+            $ignore[] = 'filter_'.$att;
+            $ignore[] = 'min_'.$att;
+            $ignore[] = 'max_'.$att;
+        }
+
+        $min_price_val = esc_attr( $min_price );
+        $max_price_val = esc_attr( $max_price );
+
+        $min_val = esc_attr( apply_filters( 'woocommerce_price_filter_widget_min_amount', $min ) );
+        $max_val = esc_attr( apply_filters( 'woocommerce_price_filter_widget_max_amount', $max ) );
+
+        $options = array(
+            'min' => $min,
+            'max' => $max,
+            'min_price' => $min_price,
+            'max_price' => $max_price,
+            'min_price_val' => $min_price_val,
+            'max_price_val' => $max_price_val,
+            'min_val' => $min_val,
+            'max_val' => $max_val
+        );
+
+        wc_get_template( 'widget/filters-price.php', [ 'options' => $options ] );
+    }
+
 	protected function get_filtered_term_product_counts( $term_ids, $taxonomy, $query_type ) {
 		return wc_get_container()->get( Filterer::class )->get_filtered_term_product_counts( $term_ids, $taxonomy, $query_type );
 	}
@@ -769,6 +815,46 @@ class Filters extends WP_Widget {
 		return $link;
 	}
 
+    protected function get_filtered_price() {
+		global $wpdb;
+
+        $args       = WC()->query->get_main_query()->query_vars;
+        $tax_query  = isset( $args['tax_query'] ) ? $args['tax_query'] : array();
+        $meta_query = isset( $args['meta_query'] ) ? $args['meta_query'] : array();
+
+        if ( ! is_post_type_archive( 'product' ) && ! empty( $args['taxonomy'] ) && ! empty( $args['term'] ) ) {
+            $tax_query[] = WC()->query->get_main_tax_query();
+        }
+
+        foreach ( $meta_query + $tax_query as $key => $query ) {
+            if ( ! empty( $query['price_filter'] ) || ! empty( $query['rating_filter'] ) ) {
+                unset( $meta_query[ $key ] );
+            }
+        }
+
+        $meta_query = new WP_Meta_Query( $meta_query );
+        $tax_query  = new WP_Tax_Query( $tax_query );
+        $search     = WC_Query::get_main_search_query_sql();
+
+        $meta_query_sql   = $meta_query->get_sql( 'post', $wpdb->posts, 'ID' );
+        $tax_query_sql    = $tax_query->get_sql( $wpdb->posts, 'ID' );
+        $search_query_sql = $search ? ' AND ' . $search : '';
+
+        $sql = "
+			SELECT min( min_price ) as min_price, MAX( max_price ) as max_price
+			FROM {$wpdb->wc_product_meta_lookup}
+			WHERE product_id IN (
+				SELECT ID FROM {$wpdb->posts}
+				" . $tax_query_sql['join'] . $meta_query_sql['join'] . "
+				WHERE {$wpdb->posts}.post_type IN ('" . implode( "','", array_map( 'esc_sql', apply_filters( 'woocommerce_price_filter_post_type', array( 'product' ) ) ) ) . "')
+				AND {$wpdb->posts}.post_status = 'publish'
+				" . $tax_query_sql['where'] . $meta_query_sql['where'] . $search_query_sql . '
+			)';
+
+        $sql = apply_filters( 'woocommerce_price_filter_sql', $sql, $meta_query_sql, $tax_query_sql );
+
+        return $wpdb->get_row( $sql ); // WPCS: unprepared SQL ok.
+	}
 
 	/**
 	 * Return the currently viewed term slug.
