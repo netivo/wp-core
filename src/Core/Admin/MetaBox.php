@@ -120,22 +120,24 @@ abstract class MetaBox {
 			], $this->screen, $this->context, $this->priority );
 		} else {
 			global $post;
-			if ( $this->template == 'home-page' ) {
-				if ( in_array( $post->ID, $this->get_page_on_front() ) ) {
-					add_meta_box( $this->id, $this->title, [
-						$this,
-						'display'
-					], $this->screen, $this->context, $this->priority );
-				}
-			} else {
-				if ( ! is_array( $this->template ) ) {
-					$this->template = array( $this->template );
-				}
-				if ( in_array( get_post_meta( $post->ID, '_wp_page_template', true ), $this->template ) ) {
-					add_meta_box( $this->id, $this->title, [
-						$this,
-						'display'
-					], $this->screen, $this->context, $this->priority );
+			if ( ! empty( $post ) ) {
+				if ( $this->template == 'home-page' ) {
+					if ( in_array( $post->ID, $this->get_page_on_front() ) ) {
+						add_meta_box( $this->id, $this->title, [
+							$this,
+							'display'
+						], $this->screen, $this->context, $this->priority );
+					}
+				} else {
+					if ( ! is_array( $this->template ) ) {
+						$this->template = array( $this->template );
+					}
+					if ( in_array( get_post_meta( $post->ID, '_wp_page_template', true ), $this->template ) ) {
+						add_meta_box( $this->id, $this->title, [
+							$this,
+							'display'
+						], $this->screen, $this->context, $this->priority );
+					}
 				}
 			}
 		}
