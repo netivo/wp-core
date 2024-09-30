@@ -129,7 +129,7 @@ abstract class Panel {
 	/**
 	 * Initializes scripts and styles loaded in admin page.
 	 */
-	public function init_header(): void {
+	public function init_header( $page ): void {
 		wp_enqueue_script( 'jquery' );
 		wp_enqueue_script( 'thickbox' );
 		wp_enqueue_style( 'thickbox' );
@@ -140,8 +140,8 @@ abstract class Panel {
 		wp_enqueue_script( 'jquery-ui-progressbar' );
 		wp_enqueue_media();
 
-		$this->custom_header();
+		$this->custom_header( $page );
 	}
 
-	protected abstract function custom_header(): void;
+	protected abstract function custom_header( $page ): void;
 }
