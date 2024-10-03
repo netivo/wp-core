@@ -22,6 +22,7 @@ class Filters extends WP_Widget {
 	public function form( $instance ) {
 		$values = ( isset( $instance['filters'] ) ) ? $instance['filters'] : [];
         $form = (isset($instance['form'])) ? $instance['form'] : false;
+        $always_show = (isset($instance['always_show'])) ? $instance['always_show'] : false;
 		if ( function_exists( 'WC' ) ) {
 			?>
             <p>
@@ -51,6 +52,11 @@ class Filters extends WP_Widget {
                     <input type="checkbox" name="<?php echo esc_attr( $this->get_field_name( 'form' ) ); ?>" value="1" <?php echo ($form) ? 'checked' : ''; ?>/> Zatwierdzanie przyciskiem
                 </label>
             </p>
+            <p>
+                <label for="<?php echo esc_attr( $this->get_field_id( 'always_show' ) ); ?>">
+                    <input type="checkbox" name="<?php echo esc_attr( $this->get_field_name( 'always_show' ) ); ?>" value="1" <?php echo ($always_show) ? 'checked' : ''; ?>/> Zawsze pokazuj
+                </label>
+            </p>
 			<?php
 		} else {
 			echo '<p>Aby włączyć filtry produktrowe, musisz mieć aktywną wtyczkę WooCommerce.</p>';
@@ -69,6 +75,7 @@ class Filters extends WP_Widget {
 		$instance            = $old_instance;
 		$instance['filters'] = $new_instance['filters'];
 		$instance['form'] = ($new_instance['form'] == 1);
+		$instance['always_show'] = ($new_instance['always_show'] == 1);
 
 		return $instance;
 	}
@@ -89,6 +96,7 @@ class Filters extends WP_Widget {
 		}
 
         $form = (!empty($instance['form']));
+        $always_show = (!empty($instance['always_show']));
 
 
 		$show_categories   = in_array( 'category', $instance['filters'] );
@@ -96,6 +104,8 @@ class Filters extends WP_Widget {
 		$show_availability = in_array( 'availability', $instance['filters'] );
 		$show_promotion    = in_array( 'promotion', $instance['filters'] );
 		$show_price        = in_array( 'price', $instance['filters'] );
+
+
 
 		if ( ! $show_categories && ! $show_attributes && ! $show_availability && ! $show_promotion && !$show_price ) {
 			return;
@@ -105,9 +115,11 @@ class Filters extends WP_Widget {
 			return;
 		}
 
-		if ( ! is_shop() && ! is_product_taxonomy() && ! is_product_category() ) {
-			return;
-		}
+        if( ! $always_show ) {
+            if ( ! is_shop() && ! is_product_taxonomy() && ! is_product_category() ) {
+			    return;
+		    }
+        }
 
 		?>
         <?php if($form) : ?>
@@ -559,7 +571,12 @@ class Filters extends WP_Widget {
             $man_id = get_queried_object_id();
         }
 
-		$meta_query     = WC_Query::get_main_meta_query();
+
+        if( ! empty( WC_Query::get_main_query() ) ) {
+            $meta_query = WC_Query::get_main_meta_query();
+        } else {
+            $meta_query = false;
+        }
 		$meta_query     = new WP_Meta_Query( $meta_query );
 		$meta_query_sql = $meta_query->get_sql( 'post', $wpdb->posts, 'ID' );
 
