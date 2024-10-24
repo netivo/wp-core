@@ -249,6 +249,8 @@ class Filters extends WP_Widget {
 									'alternative' => $t['slug'] . ':' . $v['slug'],
 									'count'       => $count,
 									'name'        => $name,
+									'active'      => false
+
 								];
 								if ( ! empty( $atr ) && ! empty( $atr_val ) ) {
 									if ( $atr == $t['slug'] && $atr_val == $v['slug'] ) {
