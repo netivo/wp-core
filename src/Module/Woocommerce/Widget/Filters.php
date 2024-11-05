@@ -510,38 +510,40 @@ class Filters extends WP_Widget {
 
     public function print_price_filter(): void {
         $prices = $this->get_filtered_price();
-        $min    = floor( $prices->min_price );
-        $max    = ceil( $prices->max_price );
+        if( ! empty( $prices->min_price ) && ! empty( $prices->max_price ) ) {
+            $min    = floor( $prices->min_price );
+            $max    = ceil( $prices->max_price );
 
-        $min_price = isset( $_GET['min_price'] ) ? wc_clean( wp_unslash( $_GET['min_price'] ) ) : apply_filters( 'woocommerce_price_filter_widget_min_amount', $min ); // WPCS: input var ok, CSRF ok.
-        $max_price = isset( $_GET['max_price'] ) ? wc_clean( wp_unslash( $_GET['max_price'] ) ) : apply_filters( 'woocommerce_price_filter_widget_max_amount', $max ); // WPCS: input var ok, CSRF ok.
+            $min_price = isset( $_GET['min_price'] ) ? wc_clean( wp_unslash( $_GET['min_price'] ) ) : apply_filters( 'woocommerce_price_filter_widget_min_amount', $min ); // WPCS: input var ok, CSRF ok.
+            $max_price = isset( $_GET['max_price'] ) ? wc_clean( wp_unslash( $_GET['max_price'] ) ) : apply_filters( 'woocommerce_price_filter_widget_max_amount', $max ); // WPCS: input var ok, CSRF ok.
 
-        $ignore = ['min_price', 'max_price'];
-        foreach(get_option('_nt_attributes', []) as $att){
-            $ignore[] = 'query_type_'.$att;
-            $ignore[] = 'filter_'.$att;
-            $ignore[] = 'min_'.$att;
-            $ignore[] = 'max_'.$att;
+            $ignore = ['min_price', 'max_price'];
+            foreach(get_option('_nt_attributes', []) as $att){
+                $ignore[] = 'query_type_'.$att;
+                $ignore[] = 'filter_'.$att;
+                $ignore[] = 'min_'.$att;
+                $ignore[] = 'max_'.$att;
+            }
+
+            $min_price_val = esc_attr( $min_price );
+            $max_price_val = esc_attr( $max_price );
+
+            $min_val = esc_attr( apply_filters( 'woocommerce_price_filter_widget_min_amount', $min ) );
+            $max_val = esc_attr( apply_filters( 'woocommerce_price_filter_widget_max_amount', $max ) );
+
+            $options = array(
+                'min' => $min,
+                'max' => $max,
+                'min_price' => $min_price,
+                'max_price' => $max_price,
+                'min_price_val' => $min_price_val,
+                'max_price_val' => $max_price_val,
+                'min_val' => $min_val,
+                'max_val' => $max_val
+            );
+
+            wc_get_template( 'widget/filters-price.php', [ 'options' => $options ] );
         }
-
-        $min_price_val = esc_attr( $min_price );
-        $max_price_val = esc_attr( $max_price );
-
-        $min_val = esc_attr( apply_filters( 'woocommerce_price_filter_widget_min_amount', $min ) );
-        $max_val = esc_attr( apply_filters( 'woocommerce_price_filter_widget_max_amount', $max ) );
-
-        $options = array(
-            'min' => $min,
-            'max' => $max,
-            'min_price' => $min_price,
-            'max_price' => $max_price,
-            'min_price_val' => $min_price_val,
-            'max_price_val' => $max_price_val,
-            'min_val' => $min_val,
-            'max_val' => $max_val
-        );
-
-        wc_get_template( 'widget/filters-price.php', [ 'options' => $options ] );
     }
 
 	protected function get_filtered_term_product_counts( $term_ids, $taxonomy, $query_type ) {
