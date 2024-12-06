@@ -532,9 +532,10 @@ abstract class Theme {
 							wp_insert_term( $term['name'], $id, [ 'slug' => $term['slug'] ] );
 						}
 					}
-					$current_terms = new WP_Term_Query( [ 'taxonomy'   => $id,
-					                                      'hide_empty' => false,
-					                                      'fields'     => 'id=>slug'
+					$current_terms = new WP_Term_Query( [
+						'taxonomy'   => $id,
+						'hide_empty' => false,
+						'fields'     => 'id=>slug'
 					] );
 					foreach ( $current_terms->get_terms() as $tid => $ct ) {
 						if ( ! array_key_exists( $ct, $customTaxonomy['terms'] ) ) {
@@ -624,9 +625,28 @@ abstract class Theme {
 	 */
 	protected function enqueue_script_or_style( string $load_dir, array $file, string $type = 'style' ): void {
 		if ( $type == 'style' ) {
-			wp_enqueue_style( $file['name'], $load_dir . $file['file'], array(), ( ( ! empty( $file['version'] ) ) ? $file['version'] : null ), ( ( ! empty( $file['media'] ) ) ? $file['media'] : 'all' ) );
+			$function = 'wp_enqueue_style';
+			if ( ! empty( $file['register'] ) ) {
+				$function = 'wp_register_style';
+			}
+			wp_enqueue_style( $file['name'], $load_dir . $file['file'],
+				( ( ! empty( $file['dependencies'] ) ) ? $file['dependencies'] : null ),
+				( ( ! empty( $file['version'] ) ) ? $file['version'] : null ),
+				( ( ! empty( $file['media'] ) ) ? $file['media'] : 'all' )
+			);
 		} else {
-			wp_enqueue_script( $file['name'], $load_dir . $file['file'], array(), ( ( ! empty( $file['version'] ) ) ? $file['version'] : null ), [ 'in_footer' => true ] );
+			$function = 'wp_enqueue_script';
+			if ( ! empty( $file['register'] ) ) {
+				$function = 'wp_register_script';
+			}
+			wp_enqueue_script( $file['name'], $load_dir . $file['file'],
+				( ( ! empty( $file['dependencies'] ) ) ? $file['dependencies'] : null ),
+				( ( ! empty( $file['version'] ) ) ? $file['version'] : null ),
+				[
+					'in_footer' => true,
+					'strategy'  => 'defer'
+				]
+			);
 		}
 		if ( ! empty( $file['version'] ) ) {
 			$this->configuration['assets']['versions'][] = $load_dir . $file['file'];
