@@ -123,7 +123,13 @@ class Filters extends WP_Widget {
 
 		?>
         <?php if($form) : ?>
-            <form method="get" class="netivo-filters js-filter-box">
+            <?php
+                 global $wp;
+                $form_action =  home_url( $wp->request );
+                $position = strpos( $form_action , '/page' );
+                $form_action = ( $position ) ? substr( $form_action, 0, $position ) : $form_action;
+            ?>
+            <form method="get" class="netivo-filters js-filter-box" action="<?php echo $form_action; ?>">
         <?php else : ?>
             <div class="netivo-filters js-filter-box">
         <?php endif; ?>

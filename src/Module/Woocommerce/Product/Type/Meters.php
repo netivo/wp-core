@@ -29,7 +29,8 @@ class Meters extends \WC_Product_Simple {
 		add_filter( 'woocommerce_product_get_sale_price', [ self::class, 'change_price' ], 10, 2 );
 		add_action( 'woocommerce_meters_add_to_cart', [ self::class, 'add_to_cart' ] );
 		add_action( 'woocommerce_checkout_create_order', [ self::class, 'save_order' ] );
-        add_filter( 'product_type_selector', [ self::class, 'add_to_select' ] );
+		add_filter( 'product_type_selector', [ self::class, 'add_to_select' ] );
+		add_filter( 'woocommerce_structured_data_product_offer', [ self::class, 'change_product_schema' ], 10, 2 );
 
 		if ( is_admin() ) {
 			add_filter( 'woocommerce_product_data_tabs', [ self::class, 'modify_pricing_tab' ] );
@@ -55,6 +56,23 @@ class Meters extends \WC_Product_Simple {
 		return $types;
 	}
 
+	public static function change_product_schema( $data, $product ): array {
+		if ( $product->get_type() == 'meters' ) {
+			if ( array_key_exists( 0, $data['priceSpecification'] ) ) {
+				if ( $product->is_on_sale() ) {
+					$data['priceSpecification'][0]['price'] = wc_format_decimal( $product->get_regular_price( 'normal' ), wc_get_price_decimals() );
+					$data['priceSpecification'][1]['price'] = wc_format_decimal( $product->get_sale_price( 'normal' ), wc_get_price_decimals() );
+				} else {
+					$data['priceSpecification'][0]['price'] = wc_format_decimal( $product->get_price( 'normal' ), wc_get_price_decimals() );
+				}
+			} else {
+				$data['priceSpecification']['price'] = wc_format_decimal( $product->get_price( 'normal' ), wc_get_price_decimals() );
+			}
+		}
+
+		return $data;
+	}
+
 	/**
 	 * Add classes to special tabs.
 	 *
@@ -71,24 +89,24 @@ class Meters extends \WC_Product_Simple {
 	/**
 	 * Gets the price for product.
 	 *
-	 * @param string $price   Price to get from.
+	 * @param string $price Price to get from.
 	 * @param \WC_Product $product Product to get price from.
 	 *
 	 * @return string
 	 */
 	public static function change_price( string $price, \WC_Product $product ): string {
-	    if(!empty($price)) {
-		    if ( $product->get_type() == 'meters' && ! is_admin() ) {
-			    $meters = $product->get_meta( '_meters_in_box' );
-			    if ( ! empty( $meters ) ) {
-				    $meters = str_replace(',', '.', $meters);
-				    $price  = (float) $price;
-				    $meters = (float) $meters;
+		if ( ! empty( $price ) ) {
+			if ( $product->get_type() == 'meters' && ! is_admin() ) {
+				$meters = $product->get_meta( '_meters_in_box' );
+				if ( ! empty( $meters ) ) {
+					$meters = str_replace( ',', '.', $meters );
+					$price  = (float) $price;
+					$meters = (float) $meters;
 //				    var_dump( $price * $meters );
-				    $price =  $price * $meters;
-			    }
-		    }
-	    }
+					$price = $price * $meters;
+				}
+			}
+		}
 
 		return $price;
 	}
@@ -96,10 +114,10 @@ class Meters extends \WC_Product_Simple {
 	/**
 	 * Sets the class name for product type.
 	 *
-	 * @param string $class_name   Generated class name for type.
+	 * @param string $class_name Generated class name for type.
 	 * @param string $product_type Product type.
-	 * @param string $variation    Is product a variation.
-	 * @param int $product_id   Product id.
+	 * @param string $variation Is product a variation.
+	 * @param int $product_id Product id.
 	 *
 	 * @return string
 	 */
@@ -134,7 +152,7 @@ class Meters extends \WC_Product_Simple {
 		global $post, $thepostid, $product_object;
 
 		$filename = __DIR__ . '/../../../../../views/woocommerce/product/type/meters-settings.phtml';
-		wp_nonce_field( 'save_product_meters' ,'product_meters_nonce' );
+		wp_nonce_field( 'save_product_meters', 'product_meters_nonce' );
 
 		include $filename;
 	}
@@ -147,14 +165,14 @@ class Meters extends \WC_Product_Simple {
 	 *
 	 * @return int
 	 */
-	public static function product_data_save( int $post_id ) : int {
-		if ( ! isset( $_POST[ 'product_meters_nonce' ] ) ) {
+	public static function product_data_save( int $post_id ): int {
+		if ( ! isset( $_POST['product_meters_nonce'] ) ) {
 			return $post_id;
 		}
-		if ( ! wp_verify_nonce( $_POST[ 'product_meters_nonce' ], 'save_product_meters' ) ) {
+		if ( ! wp_verify_nonce( $_POST['product_meters_nonce'], 'save_product_meters' ) ) {
 			return $post_id;
 		}
-		if ( ! in_array( $_POST['post_type'], ['product'] ) ) {
+		if ( ! in_array( $_POST['post_type'], [ 'product' ] ) ) {
 			return $post_id;
 		}
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
@@ -170,7 +188,8 @@ class Meters extends \WC_Product_Simple {
 		} else {
 			delete_post_meta( $post_id, '_items_in_box' );
 		}
-        return $post_id;
+
+		return $post_id;
 	}
 
 	/**
