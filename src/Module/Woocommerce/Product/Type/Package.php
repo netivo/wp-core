@@ -37,8 +37,8 @@ class Package extends WC_Product_Simple {
 		add_filter( 'product_type_selector', [ self::class, 'add_to_select' ] );
 
 		if ( is_admin() ) {
-			add_filter('woocommerce_product_data_tabs', [self::class, 'add_tab']);
-			add_action('woocommerce_product_data_panels', [self::class, 'display']);
+			add_filter( 'woocommerce_product_data_tabs', [ self::class, 'add_tab' ] );
+			add_action( 'woocommerce_product_data_panels', [ self::class, 'display' ] );
 			add_action( 'save_post', [ self::class, 'do_save' ] );
 
 			add_filter( 'woocommerce_product_data_tabs', [ self::class, 'modify_pricing_tab' ] );
@@ -76,10 +76,10 @@ class Package extends WC_Product_Simple {
 	/**
 	 * Sets the class name for product type.
 	 *
-	 * @param string $class_name   Generated class name for type.
+	 * @param string $class_name Generated class name for type.
 	 * @param string $product_type Product type.
-	 * @param string $variation    Is product a variation.
-	 * @param string $product_id   Product id.
+	 * @param string $variation Is product a variation.
+	 * @param string $product_id Product id.
 	 *
 	 * @return string
 	 */
@@ -100,11 +100,11 @@ class Package extends WC_Product_Simple {
 		endif;
 
 		?>
-		<script type='text/javascript'>
+        <script type='text/javascript'>
             jQuery('.package_options').addClass('show_if_package');
             jQuery('.options_group.pricing').addClass('show_if_package');
             jQuery('.form-field._manage_stock_field').addClass('show_if_package');
-		</script><?php
+        </script><?php
 
 	}
 
@@ -115,13 +115,14 @@ class Package extends WC_Product_Simple {
 	 *
 	 * @return array
 	 */
-	public static function add_tab( array $tabs): array {
+	public static function add_tab( array $tabs ): array {
 		$tabs['package'] = array(
-			'label'    => __('Ustawienia zestawu', 'netivo'),
+			'label'    => __( 'Ustawienia zestawu', 'netivo' ),
 			'target'   => 'nt_package_product_data',
 			'class'    => array( '' ),
 			'priority' => 15,
 		);
+
 		return $tabs;
 	}
 
@@ -152,33 +153,34 @@ class Package extends WC_Product_Simple {
 	 * @return int
 	 */
 	public static function do_save( int $post_id ): int {
-		if ( ! isset( $_POST[ 'product_package_tab_nonce' ] ) ) {
+		if ( ! isset( $_POST['product_package_tab_nonce'] ) ) {
 			return $post_id;
 		}
-		if ( ! wp_verify_nonce( $_POST[ 'product_package_tab_nonce' ], 'save_product_package_tab' ) ) {
+		if ( ! wp_verify_nonce( $_POST['product_package_tab_nonce'], 'save_product_package_tab' ) ) {
 			return $post_id;
 		}
-		if ( ! in_array( $_POST['post_type'], ['product'] ) ) {
+		if ( ! in_array( $_POST['post_type'], [ 'product' ] ) ) {
 			return $post_id;
 		}
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return $post_id;
 		}
 
-        if(isset($_POST['_package_products_field'])) {
-	        $products = $_POST['_package_products_field'];
+		if ( isset( $_POST['_package_products_field'] ) ) {
+			$products = $_POST['_package_products_field'];
 
-	        delete_post_meta( $post_id, '_nt_package_product' );
-	        if ( ! empty( $products ) ) {
-		        foreach ( $products as $product => $amount ) {
-			        add_post_meta( $post_id, '_nt_package_product', array(
-				        'product' => $product,
-				        'amount'  => $amount
-			        ) );
-		        }
-	        }
-        }
-        return $post_id;
+			delete_post_meta( $post_id, '_nt_package_product' );
+			if ( ! empty( $products ) ) {
+				foreach ( $products as $product => $amount ) {
+					add_post_meta( $post_id, '_nt_package_product', array(
+						'product' => $product,
+						'amount'  => $amount
+					) );
+				}
+			}
+		}
+
+		return $post_id;
 	}
 
 	/**
@@ -191,27 +193,31 @@ class Package extends WC_Product_Simple {
 	/**
 	 * Gets the price for product.
 	 *
-	 * @param string $price   Price to get from.
+	 * @param string $price Price to get from.
 	 * @param \WC_Product $product Product to get price from.
 	 *
 	 * @return string
 	 */
 	public static function change_price( string $price, \WC_Product $product ): string {
-		if ( $product->get_type() == 'package' && ! (is_admin() && !wp_doing_ajax()) ) {
-			if(!empty($price)) return $price;
-			$pr_price = 0;
-			$package_products = $product->get_meta('_nt_package_product', false);
-			if(!empty($package_products)){
-				foreach($package_products as $package_product){
+		if ( $product->get_type() == 'package' && ! ( is_admin() && ! wp_doing_ajax() ) ) {
+			if ( ! empty( $price ) ) {
+				return $price;
+			}
+			$pr_price         = 0;
+			$package_products = $product->get_meta( '_nt_package_product', false );
+			if ( ! empty( $package_products ) ) {
+				foreach ( $package_products as $package_product ) {
 					$dp = $package_product->value;
-					$pr = wc_get_product($dp['product']);
-					if(!empty($pr)){
-						$pr_price += (float)$pr->get_price('normal') * (float)$dp['amount'];
+					$pr = wc_get_product( $dp['product'] );
+					if ( ! empty( $pr ) ) {
+						$pr_price += (float) $pr->get_price( 'normal' ) * (float) $dp['amount'];
 					}
 				}
 			}
+
 			return $pr_price;
 		}
+
 		return $price;
 	}
 
@@ -228,13 +234,13 @@ class Package extends WC_Product_Simple {
 				 */
 				$prod = $item->get_product();
 				if ( $prod->get_type() == 'package' ) {
-					$proportions = [];
-					$summed_price = self::change_price(0, $prod);
+					$proportions      = [];
+					$summed_price     = self::change_price( 0, $prod );
 					$package_products = $prod->get_package_products();
-					foreach($package_products as $package_product){
-						$proportions[$package_product['product']->get_id()] = $package_product['product']->get_price() / $summed_price;
+					foreach ( $package_products as $package_product ) {
+						$proportions[ $package_product['product']->get_id() ] = $package_product['product']->get_price() / $summed_price;
 					}
-					foreach($package_products as $package_product) {
+					foreach ( $package_products as $package_product ) {
 						$pr       = $package_product['product'];
 						$qty      = $item->get_quantity( 'data' ) * (float) $package_product['amount'];
 						$subtotal = $proportions[ $pr->get_id() ] * $order->get_item_subtotal( $item );
@@ -250,7 +256,17 @@ class Package extends WC_Product_Simple {
 
 						$order->add_item( $nitem );
 					}
-					$order->remove_item($key);
+				}
+			}
+		}
+		foreach ( $order->get_items() as $key => $item ) {
+			if ( $item->get_type() == 'line_item' ) {
+				/**
+				 * @var $item \WC_Order_Item_Product
+				 */
+				$prod = $item->get_product();
+				if ( $prod->get_type() == 'package' ) {
+					$order->remove_item( $key );
 				}
 			}
 		}
@@ -281,40 +297,48 @@ class Package extends WC_Product_Simple {
 	}
 
 	#[Override] public function get_stock_quantity( $context = 'view' ): mixed {
-		$qty = $this->get_prop('stock_quantity', $context);
-		if($qty > 0 || is_admin()) return $qty;
-		$qty = null;
-		$package_products = $this->get_meta('_nt_package_product', false);
-		if(!empty($package_products)){
-			foreach($package_products as $package_product){
+		$qty = $this->get_prop( 'stock_quantity', $context );
+		if ( $qty > 0 || is_admin() ) {
+			return $qty;
+		}
+		$qty              = null;
+		$package_products = $this->get_meta( '_nt_package_product', false );
+		if ( ! empty( $package_products ) ) {
+			foreach ( $package_products as $package_product ) {
 				$dp = $package_product->value;
-				$pr = wc_get_product($dp['product']);
-				if(!empty($pr)){
+				$pr = wc_get_product( $dp['product'] );
+				if ( ! empty( $pr ) ) {
 					$pqty = $pr->get_stock_quantity();
-					$pqty = (empty($pqty)) ? 0 : $pqty;
-					if($qty === null || $pqty < $qty) $qty = $pqty/(float)$dp['amount'];
+					$pqty = ( empty( $pqty ) ) ? 0 : $pqty;
+					if ( $qty === null || $pqty < $qty ) {
+						$qty = $pqty / (float) $dp['amount'];
+					}
 				}
 			}
 		}
-		if($qty < 0) return 0;
+		if ( $qty < 0 ) {
+			return 0;
+		}
+
 		return $qty;
 	}
 
 	public function get_package_products(): array {
-		$products = [];
-		$package_products = $this->get_meta('_nt_package_product', false);
-		if(!empty($package_products)) {
+		$products         = [];
+		$package_products = $this->get_meta( '_nt_package_product', false );
+		if ( ! empty( $package_products ) ) {
 			foreach ( $package_products as $package_product ) {
 				$dp = $package_product->value;
-				$pr = wc_get_product($dp['product']);
-				if(!empty($pr)){
+				$pr = wc_get_product( $dp['product'] );
+				if ( ! empty( $pr ) ) {
 					$products[] = [
 						'product' => $pr,
-						'amount' => (float)$dp['amount']
+						'amount'  => (float) $dp['amount']
 					];
 				}
 			}
 		}
+
 		return $products;
 	}
 }
