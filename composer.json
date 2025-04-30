@@ -19,8 +19,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Netivo\\Core\\": "src/Core",
-      "Netivo\\Module\\": "src/Module"
+      "Netivo\\Core\\": "src/Core"
     }
   }
 }
