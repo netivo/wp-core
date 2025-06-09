@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.1.2
+
+- Custom post registration also using class objects.
+
 ## Version 1.1.1
 
 - Added changelog and Readme

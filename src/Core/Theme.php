@@ -471,11 +471,17 @@ abstract class Theme {
 
 		foreach ( $customPosts as $id => $customPost ) {
 			if ( ! in_array( $id, [ 'post', 'page' ] ) ) {
-				register_post_type( $id, $customPost );
-				if ( ! empty( $customPost['capabilities'] ) ) {
-					$role = get_role( 'administrator' );
-					foreach ( $customPost['capabilities'] as $capability ) {
-						$role->add_cap( $capability );
+				if ( is_string( $customPost ) ) {
+					if ( class_exists( $customPost ) ) {
+						new $customPost();
+					}
+				} else {
+					register_post_type( $id, $customPost );
+					if ( ! empty( $customPost['capabilities'] ) ) {
+						$role = get_role( 'administrator' );
+						foreach ( $customPost['capabilities'] as $capability ) {
+							$role->add_cap( $capability );
+						}
 					}
 				}
 			} else {
