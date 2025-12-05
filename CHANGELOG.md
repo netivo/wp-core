@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.1.3
+
+- Fixed bug with DB delta when updating table structure
+
 ## Version 1.1.2
 
 - Custom post registration also using class objects.

@@ -56,7 +56,7 @@ class EntityManager {
 	 * Magic method to call create_table_%class%.
 	 *
 	 * @param string $name Name of method.
-	 * @param mixed  $arguments Argments of method.
+	 * @param mixed $arguments Argments of method.
 	 *
 	 * @throws \ReflectionException When error.
 	 */
@@ -93,7 +93,7 @@ class EntityManager {
 						}
 						$fld[] = $tmp;
 					}
-					$sql = "CREATE TABLE {$wpdb->prefix}{$table->get_name()} ( " . implode( ',', $fld ) . ") {$wpdb->get_charset_collate()}";
+					$sql = "CREATE TABLE {$wpdb->prefix}{$table->get_name()} ( " . PHP_EOL . implode( ',' . PHP_EOL, $fld ) . PHP_EOL . ") {$wpdb->get_charset_collate()}";
 
 					dbDelta( $sql );
 
@@ -399,6 +399,7 @@ class EntityManager {
 				return $ret;
 			}
 		}
+
 		return null;
 	}
 
@@ -445,17 +446,20 @@ class EntityManager {
 	 * @return true|int
 	 * @throws \ReflectionException
 	 */
-    public function clear_table(): true|int {
-        global $wpdb;
-        $class = $this->entity_name;
-        $table = Annotations::get_table_annotations( $class );
-        if ( ! empty( $table ) ) {
-            $name = $table->get_name();
-            $sql = "TRUNCATE {$wpdb->$name}";
-            $res = $wpdb->query($sql);
-            if($res) return true;
-        }
-        return 0;
-    }
+	public function clear_table(): true|int {
+		global $wpdb;
+		$class = $this->entity_name;
+		$table = Annotations::get_table_annotations( $class );
+		if ( ! empty( $table ) ) {
+			$name = $table->get_name();
+			$sql  = "TRUNCATE {$wpdb->$name}";
+			$res  = $wpdb->query( $sql );
+			if ( $res ) {
+				return true;
+			}
+		}
+
+		return 0;
+	}
 
 }
