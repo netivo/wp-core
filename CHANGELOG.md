@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.2
+
+- Added term metabox class to simplify term meta handling
+- Modified metabox class to store meta filed names
+
 ## Version 1.1.3
 
 - Fixed bug with DB delta when updating table structure
