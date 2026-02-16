@@ -19,6 +19,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 abstract class MetaBox {
+
+	/**
+	 * Metadata fields supported by the application.
+	 * This array holds the definitions of custom fields used for storing additional data.
+	 *
+	 * @var array
+	 */
+	public static array $META_FIELDS = [];
+
 	/**
 	 * Metabox id.
 	 *
@@ -75,6 +84,14 @@ abstract class MetaBox {
 	 * @var string
 	 */
 	protected string $view_name = '';
+
+	public static function get_field_name( string $field ): string {
+		if ( array_key_exists( $field, static::$META_FIELDS ) ) {
+			return static::$META_FIELDS[ $field ];
+		}
+
+		return '';
+	}
 
 	/**
 	 * MetaBox constructor.
