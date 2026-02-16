@@ -57,6 +57,7 @@ abstract class Panel {
 		try {
 			$this->init_pages();
 			$this->init_metaboxes();
+			$this->init_termmeta();
 			$this->init_gutenberg();
 			$this->init_bulkactions();
 
@@ -91,6 +92,19 @@ abstract class Panel {
 	protected function init_metaboxes(): void {
 		if ( ! empty( $this->modules['metabox'] ) ) {
 			foreach ( $this->modules['metabox'] as $meta ) {
+				if ( class_exists( $meta ) ) {
+					new $meta( $this->parent_class->get_view_path() );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Init term meta boxes in Admin view.
+	 */
+	protected function init_termmeta(): void {
+		if ( ! empty( $this->modules['term-meta'] ) ) {
+			foreach ( $this->modules['term-meta'] as $meta ) {
 				if ( class_exists( $meta ) ) {
 					new $meta( $this->parent_class->get_view_path() );
 				}
