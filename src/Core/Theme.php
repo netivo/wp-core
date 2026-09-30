@@ -178,9 +178,21 @@ abstract class Theme {
 	 * Calls security rules for WordPress.
 	 */
 	protected function init_security(): void {
+		// xmlrpc_enabled only disables authenticated methods, pingback.ping stays open without xmlrpc_methods.
+		add_filter( 'xmlrpc_enabled', '__return_false' );
+		add_filter( 'xmlrpc_methods', '__return_empty_array' );
+
 		remove_action( 'wp_head', 'wp_generator' );
+		add_filter( 'the_generator', '__return_empty_string' );
+
+		remove_action( 'wp_head', 'rsd_link' );
+		remove_action( 'wp_head', 'wlwmanifest_link' );
+		add_filter( 'wp_headers', [ $this, 'remove_pingback_header' ] );
+
 		add_filter( 'style_loader_src', [ $this, 'remove_version_scripts' ], 9999 );
 		add_filter( 'script_loader_src', [ $this, 'remove_version_scripts' ], 9999 );
+
+		add_filter( 'rest_endpoints', [ $this, 'restrict_users_endpoints' ] );
 	}
 
 	/**
@@ -358,7 +370,7 @@ abstract class Theme {
 	}
 
 	/**
-	 * Removes version from query string loading styles/scripts
+	 * Removes version from query string loading styles/scripts on front.
 	 * It does not remove version for sources which have version in assets
 	 *
 	 * @param string $src Query string from style/script.
@@ -366,13 +378,49 @@ abstract class Theme {
 	 * @return string
 	 */
 	public function remove_version_scripts( string $src ): string {
+		if ( is_admin() ) {
+			return $src;
+		}
+
+		$src_without_version = remove_query_arg( 'ver', $src );
+
 		if ( ! empty( $this->configuration['assets']['versions'] ) ) {
-			if ( in_array( $src, $this->configuration['assets']['versions'] ) ) {
+			if ( in_array( $src_without_version, $this->configuration['assets']['versions'] ) ) {
 				return $src;
 			}
 		}
 
-		return remove_query_arg( 'ver', $src );
+		return $src_without_version;
+	}
+
+	/**
+	 * Removes X-Pingback header from server responses.
+	 *
+	 * @param array $headers Headers to be sent.
+	 *
+	 * @return array
+	 */
+	public function remove_pingback_header( array $headers ): array {
+		unset( $headers['X-Pingback'] );
+
+		return $headers;
+	}
+
+	/**
+	 * Removes users REST endpoints for users who can not edit posts, to prevent user enumeration.
+	 *
+	 * @param array $endpoints Registered REST endpoints.
+	 *
+	 * @return array
+	 */
+	public function restrict_users_endpoints( array $endpoints ): array {
+		if ( current_user_can( 'edit_posts' ) ) {
+			return $endpoints;
+		}
+
+		unset( $endpoints['/wp/v2/users'], $endpoints['/wp/v2/users/(?P<id>[\d]+)'] );
+
+		return $endpoints;
 	}
 
 	/**

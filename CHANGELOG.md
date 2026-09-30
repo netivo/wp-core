@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 1.2.1
+
+- Added security rules: disabled XML-RPC, removed generator from feeds, removed RSD and WLW manifest links, removed X-Pingback header
+- Restricted users REST endpoints to users who can edit posts
+- Fixed removing versions from styles/scripts with version set in assets config
+- Versions are no longer removed from styles/scripts in admin
+
 ## Version 1.2
 
 - Added term metabox class to simplify term meta handling
