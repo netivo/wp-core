@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 1.3
+
+- Added option to create WP CLI commands
+
 ## Version 1.2.2
 
 - Added support for AI Agents programming
