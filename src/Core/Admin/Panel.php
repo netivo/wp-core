@@ -16,6 +16,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Abstract class Panel
+ *
+ * Parent class for the admin side of a theme. Created by Theme::init_admin_site().
+ * Reads modules.admin from the configuration and loads pages, metaboxes, term meta,
+ * Gutenberg blocks and bulk actions.
+ */
 abstract class Panel {
 	/**
 	 * @var Theme|null
@@ -68,6 +75,12 @@ abstract class Panel {
 		}
 	}
 
+	/**
+	 * Sets the include path and URI of the theme admin files.
+	 * Must be implemented by the subclass; the values are used by Gutenberg modules.
+	 *
+	 * @return void
+	 */
 	protected abstract function set_vars(): void;
 
 	/**
@@ -138,6 +151,11 @@ abstract class Panel {
 		}
 	}
 
+	/**
+	 * Theme-specific admin setup, called after all modules are loaded.
+	 *
+	 * @return void
+	 */
 	protected abstract function init(): void;
 
 	/**
@@ -157,5 +175,13 @@ abstract class Panel {
 		$this->custom_header( $page );
 	}
 
+	/**
+	 * Adds theme-specific scripts and styles to the admin page.
+	 * Called from init_header() on admin_enqueue_scripts.
+	 *
+	 * @param string $page Current admin page hook suffix.
+	 *
+	 * @return void
+	 */
 	protected abstract function custom_header( $page ): void;
 }

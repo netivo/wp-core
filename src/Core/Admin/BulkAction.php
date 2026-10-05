@@ -14,6 +14,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Abstract class BulkAction
+ *
+ * Parent class for a custom bulk action on the post list screen.
+ * Subclasses set $id, $name and $screen, and implement do_action().
+ */
 abstract class BulkAction {
 	/**
 	 * Id of action, also a slug.

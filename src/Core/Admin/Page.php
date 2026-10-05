@@ -17,6 +17,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Abstract class Page
+ *
+ * Parent class for an admin menu page, sub-page or tab.
+ * Subclasses set the configuration properties, implement do_action() and save(),
+ * and render their content from a view file.
+ */
 abstract class Page {
 
 	/**
@@ -128,8 +135,7 @@ abstract class Page {
 	 * Page constructor.
 	 *
 	 * @param string $path Path to admin.
-	 *
-	 * @throws \ReflectionException When error searching children.
+	 * @param array $children Child page definitions, each with 'class' and optional 'children'.
 	 */
 	public function __construct( $path, $children ) {
 		$this->_views_path = $path;

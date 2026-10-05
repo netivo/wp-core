@@ -40,7 +40,7 @@ abstract class Gutenberg {
 	}
 
 	/**
-	 * Registers scripts, styles and block.
+	 * Registers the block type defined by block.json.
 	 *
 	 * @throws \Exception When error.
 	 */

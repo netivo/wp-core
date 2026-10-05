@@ -14,6 +14,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Class View
+ *
+ * Renders an admin page: the shared layout around the page's own view file.
+ * Variables set through magic properties are available in the layout and the page view.
+ */
 class View {
 	/**
 	 * Variables to put on view
@@ -29,6 +35,11 @@ class View {
 	 */
 	protected ?Page $_page = null;
 
+	/**
+	 * View constructor.
+	 *
+	 * @param Page $page Page the view belongs to.
+	 */
 	public function __construct( Page $page ) {
 		$this->_page = $page;
 	}
@@ -44,8 +55,6 @@ class View {
 
 	/**
 	 * Renders the view
-	 *
-	 * @throws \Exception When error.
 	 */
 	protected function render(): void {
 		require __DIR__ . '/../../../views/layout.phtml';

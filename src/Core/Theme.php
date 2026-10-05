@@ -287,7 +287,7 @@ abstract class Theme {
 
 	/**
 	 * Initializes rest routes configured in modules.config.php under the section rest.
-	 * Each module should extend \Netivo\Core\Endpoint class.
+	 * Each module should extend \Netivo\Core\RestController class.
 	 *
 	 * @return void
 	 */
@@ -738,6 +738,9 @@ abstract class Theme {
 		add_theme_support( 'woocommerce' );
 	}
 
+	/**
+	 * Prevents cloning of the theme instance, which must stay a singleton.
+	 */
 	protected function __clone() {
 	}
 }

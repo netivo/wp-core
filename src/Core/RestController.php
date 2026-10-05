@@ -43,6 +43,10 @@ abstract class RestController {
 	 */
 	protected string $version = 'v1';
 
+	/**
+	 * RestController constructor.
+	 * Hooks register_routes() to rest_api_init.
+	 */
 	public function __construct()
 	{
 		add_action('rest_api_init', [$this, 'register_routes']);

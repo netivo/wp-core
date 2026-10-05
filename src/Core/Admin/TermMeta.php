@@ -144,7 +144,7 @@ abstract class TermMeta {
 	 * Saves meta data for a term.
 	 *
 	 * @param int $term_id The ID of the term being saved.
-	 * @param mixed $tt_id Optional. The term taxonomy ID. Default is null.
+	 * @param ?int $tt_id Optional. The term taxonomy ID. Default is null.
 	 *
 	 * @return int The term ID after processing.
 	 */
@@ -164,7 +164,7 @@ abstract class TermMeta {
 	 * Saves data associated with a term.
 	 *
 	 * @param int $term_id The ID of the term to save data for.
-	 * @param mixed|null $tt_id Optional. The term taxonomy ID. Defaults to null.
+	 * @param ?int $tt_id Optional. The term taxonomy ID. Defaults to null.
 	 *
 	 * @return int The ID of the term after saving.
 	 */

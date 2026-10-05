@@ -32,7 +32,7 @@ class Annotations {
 	 *
 	 * @param string $className class name to get annotations.
 	 *
-	 * @return array  self::$annotationCache all annotated elements.
+	 * @return array Annotations of the class, keyed by annotation name.
 	 *
 	 * @throws \ReflectionException When error.
 	 */
@@ -268,12 +268,12 @@ class Annotations {
 	}
 
 	/**
-	 * Gets all anotations with pattern @SomeAnnotation() from a determinated method of a given class
+	 * Gets all anotations with pattern @SomeAnnotation() from a determinated property of a given class
 	 *
 	 * @param string $className class name.
 	 * @param string $propertyName property name to get annotations.
 	 *
-	 * @return array  self::$annotationCache all annotated elements of a method given
+	 * @return array  self::$annotationCache all annotated elements of a property given
 	 */
 	public static function get_property_annotations( string $className, string $propertyName ) {
 		if ( ! isset( self::$annotationCache[ $className . '->' . $propertyName ] ) ) {

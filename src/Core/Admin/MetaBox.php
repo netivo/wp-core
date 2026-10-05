@@ -18,6 +18,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Abstract class MetaBox
+ *
+ * Parent class for a metabox on the post edit screen.
+ * Subclasses set the configuration properties, implement save() and provide a view file.
+ */
 abstract class MetaBox {
 
 	/**
@@ -85,6 +91,13 @@ abstract class MetaBox {
 	 */
 	protected string $view_name = '';
 
+	/**
+	 * Gets the meta field name for a key defined in $META_FIELDS.
+	 *
+	 * @param string $field Key of the field in $META_FIELDS.
+	 *
+	 * @return string Meta name, or an empty string if the key is not defined.
+	 */
 	public static function get_field_name( string $field ): string {
 		if ( array_key_exists( $field, static::$META_FIELDS ) ) {
 			return static::$META_FIELDS[ $field ];
@@ -160,6 +173,12 @@ abstract class MetaBox {
 		}
 	}
 
+	/**
+	 * Gets the front page ID for every configured language.
+	 * Uses Polylang or WPML when active, otherwise the page_on_front option.
+	 *
+	 * @return array List of post IDs.
+	 */
 	protected function get_page_on_front(): array {
 		$pof = (int) get_option( 'page_on_front' );
 		$ret = [];
