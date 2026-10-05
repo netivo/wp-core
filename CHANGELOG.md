@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.2.2
+
+- Added support for AI Agents programming
+- Added docs
+
 ## Version 1.2.1
 
 - Added security rules: disabled XML-RPC, removed generator from feeds, removed RSD and WLW manifest links, removed X-Pingback header
