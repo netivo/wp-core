@@ -11,6 +11,7 @@ This guide covers how to use the library. It does not document every class; the 
 - [Admin](admin.md): admin panel, pages, metaboxes, term fields, bulk actions.
 - [Database](database.md): entities, annotations, queries.
 - [Frontend](frontend.md): post types and taxonomies, assets, menus, sidebars, image sizes, endpoints, REST routes, Gutenberg blocks, widgets, customizer.
+- [WP-CLI commands](cli.md): commands with `--dry-run`, enabled through `modules.cli`.
 
 ## Quick start
 

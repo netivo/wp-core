@@ -102,6 +102,7 @@ abstract class Theme {
 		$this->init_endpoints();
 		$this->init_gutenberg();
 		$this->init_rest_routes();
+		$this->init_cli();
 
 		if ( function_exists( 'WC' ) ) {
 			$this->init_woocommerce();
@@ -296,6 +297,22 @@ abstract class Theme {
 			foreach ( $this->configuration['modules']['rest'] as $rest ) {
 				if ( class_exists( $rest ) ) {
 					new $rest();
+				}
+			}
+		}
+	}
+
+	/**
+	 * Initializes WP-CLI commands configured in modules.config.php under the section cli.
+	 * Each module should extend \Netivo\Core\CliCommand class. Only runs under WP-CLI.
+	 *
+	 * @return void
+	 */
+	protected function init_cli(): void {
+		if ( defined( 'WP_CLI' ) && WP_CLI && ! empty( $this->configuration['modules']['cli'] ) ) {
+			foreach ( $this->configuration['modules']['cli'] as $cli ) {
+				if ( class_exists( $cli ) ) {
+					new $cli();
 				}
 			}
 		}

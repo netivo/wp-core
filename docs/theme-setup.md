@@ -53,6 +53,7 @@ return [
         'database'   => [ \Netivo\Theme\Model\Product::class ],
         'endpoint'   => [ \Netivo\Theme\Endpoint\Download::class ],
         'rest'       => [ \Netivo\Theme\Rest\Products::class ],
+        'cli'        => [ \Netivo\Theme\Cli\ImportProducts::class ],
         'gutenberg'  => [ \Netivo\Theme\Blocks\Hero::class ],
         'widget'     => [ \Netivo\Theme\Widgets\Contact::class ],
         'admin'      => [
@@ -72,6 +73,7 @@ return [
 | `database` | `Database\Entity` | [database.md](database.md) |
 | `endpoint` | `Endpoint` | [frontend.md](frontend.md#endpoints) |
 | `rest` | `RestController` | [frontend.md](frontend.md#rest-routes) |
+| `cli` | `CliCommand` (WP-CLI only) | [cli.md](cli.md) |
 | `gutenberg` | `Gutenberg` | [frontend.md](frontend.md#gutenberg-blocks) |
 | `widget` | `WP_Widget` | [frontend.md](frontend.md#widgets) |
 | `admin.pages` | `Admin\Page` | [admin.md](admin.md#pages) |
