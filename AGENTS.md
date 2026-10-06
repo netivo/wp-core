@@ -5,7 +5,8 @@ Guidance for AI coding agents working in this repository.
 ## Commands
 
 - Install: `composer install` (PHP >= 8.1; generates `vendor/autoload.php`, PSR-4 `Netivo\Core\` => `src/Core/`)
-- There is no build, lint, or test tooling configured (no phpunit/pest config, no phpcs/phpstan config, no CI). Verify changes by loading the code inside a WordPress install.
+- Lint: `composer lint` (phpcs with `phpcs.xml.dist`: WordPressVIPMinimum + PHPCompatibility 8.4); `composer lint:fix` runs phpcbf. Requires `composer install` first.
+- There is no build or test tooling configured (no phpunit/pest config, no phpstan config, no CI). Verify changes by loading the code inside a WordPress install.
 
 ## What this is
 
