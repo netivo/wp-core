@@ -74,11 +74,11 @@ abstract class Endpoint
     public function redirect_template(): void
     {
         if ( get_query_var( $this->name ) ) {
-            if ( $this->type == 'template' ) {
+            if ( $this->type === 'template' ) {
                 locate_template( $this->template, true );
                 exit();
 
-            } elseif ( $this->type == 'action' ) {
+            } elseif ( $this->type === 'action' ) {
 
                 $this->doAction( get_query_var( $this->name ) );
 

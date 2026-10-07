@@ -48,7 +48,7 @@ abstract class Gutenberg {
 		$obj  = new ReflectionClass( $this );
 		$data = $obj->getAttributes();
 		foreach ( $data as $attribute ) {
-			if ( $attribute->getName() == 'Netivo\Attributes\Block' ) {
+			if ( $attribute->getName() === 'Netivo\Attributes\Block' ) {
 				$name = $attribute->getArguments()[0];
 			}
 		}

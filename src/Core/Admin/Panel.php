@@ -71,7 +71,7 @@ abstract class Panel {
 			$this->init();
 
 		} catch ( \Exception $e ) {
-			var_dump( $e->getCode() );
+			wp_trigger_error( __METHOD__, sprintf( '%s (code %d)', $e->getMessage(), $e->getCode() ) );
 		}
 	}
 

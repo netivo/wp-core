@@ -141,8 +141,8 @@ abstract class Page {
 		$this->_views_path = $path;
 		$this->_children   = $children;
 		$this->generate_redirect();
-		add_action( 'init', [ $this, 'do_save' ] );
-		if ( $this->_type != 'tab' ) {
+		add_action( 'admin_init', [ $this, 'do_save' ] );
+		if ( $this->_type !== 'tab' ) {
 			add_action( 'admin_menu', [ $this, 'register_menu' ] );
 			$this->register_children();
 		}
@@ -155,7 +155,7 @@ abstract class Page {
 	protected function generate_redirect(): void {
 		if ( empty( $this->_redirect_url ) ) {
 			$rdu = 'admin.php?page=';
-			if ( $this->_type == 'tab' ) {
+			if ( $this->_type === 'tab' ) {
 				$rdu .= $this->_parent;
 				$rdu .= '&tab=' . $this->_menu_slug;
 			} else {
@@ -172,23 +172,31 @@ abstract class Page {
 		if ( ! empty( $this->_children ) ) {
 			foreach ( $this->_children as $page ) {
 				if ( class_exists( $page['class'] ) ) {
-					$className = $page['class'];
-					$children  = ( ! empty( $page['children'] ) ) ? $page['children'] : [];
-					new $className( $this->_views_path, $children );
+					$className                 = $page['class'];
+					$children                  = ( ! empty( $page['children'] ) ) ? $page['children'] : [];
+					$this->_childrenObjects[] = new $className( $this->_views_path, $children );
 				}
 			}
 		}
 	}
 
 	/**
+	 * Outputs the nonce field for this page's save form.
+	 * Theme view files must call this inside the `<form>` that submits `save_{$this->_menu_slug}`.
+	 */
+	public function nonce_field(): void {
+		wp_nonce_field( 'save_' . $this->_menu_slug );
+	}
+
+	/**
 	 * Register menu element in Admin
 	 */
 	public function register_menu(): void {
-		if ( $this->_type == 'subpage' ) {
+		if ( $this->_type === 'subpage' ) {
 			add_submenu_page( $this->_parent, $this->_page_title, $this->_menu_text, $this->_capability, $this->_menu_slug, function () {
 				$this->display();
 			} );
-		} elseif ( $this->_type == 'main' ) {
+		} elseif ( $this->_type === 'main' ) {
 			add_menu_page( $this->_page_title, $this->_menu_text, $this->_capability, $this->_menu_slug, function () {
 				$this->display();
 			}, $this->_icon, $this->_position );
@@ -202,8 +210,10 @@ abstract class Page {
 	public function display(): void {
 		$this->view->title = $this->_page_title;
 		wp_enqueue_media();
-		if ( ! $this->is_tab() && isset( $_GET['tab'] ) && ! empty( $_GET['tab'] ) ) {
-			$tab = $this->find_tab( $_GET['tab'] );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation, not a state change; value is sanitized with sanitize_key().
+		$tab_slug = ( isset( $_GET['tab'] ) && ! empty( $_GET['tab'] ) ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
+		if ( ! $this->is_tab() && ! empty( $tab_slug ) ) {
+			$tab = $this->find_tab( $tab_slug );
 			if ( ! empty( $tab ) ) {
 				$tab->display();
 			} else {
@@ -225,7 +235,7 @@ abstract class Page {
 	 * @return bool
 	 */
 	public function is_tab(): bool {
-		return $this->_type == 'tab';
+		return $this->_type === 'tab';
 	}
 
 	/**
@@ -238,7 +248,7 @@ abstract class Page {
 	public function find_tab( string $tab ): mixed {
 		foreach ( $this->_childrenObjects as $child ) {
 			if ( $child->is_tab() ) {
-				if ( $child->get_slug() == $tab ) {
+				if ( $child->get_slug() === $tab ) {
 					return $child;
 				}
 			}
@@ -265,29 +275,38 @@ abstract class Page {
 	 * Save main function, called on save
 	 */
 	public function do_save(): void {
-		if ( ! $this->is_tab() && isset( $_GET['tab'] ) && ! empty( $_GET['tab'] ) ) {
-			$tab = $this->find_tab( $_GET['tab'] );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation, not a state change; value is sanitized with sanitize_key().
+		$tab_slug = ( isset( $_GET['tab'] ) && ! empty( $_GET['tab'] ) ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
+		if ( ! $this->is_tab() && ! empty( $tab_slug ) ) {
+			$tab = $this->find_tab( $tab_slug );
 			if ( ! empty( $tab ) ) {
 				$tab->do_save();
-			} else {
-				if ( $this->is_post() ) {
-					try {
-						$this->save();
-						wp_redirect( admin_url( $this->_redirect_url . '&success' ) );
-					} catch ( Exception $e ) {
-						wp_redirect( admin_url( $this->_redirect_url . '&error=' . $e->getMessage() ) );
-					}
-				}
+
+				return;
 			}
-		} else {
-			if ( $this->is_post() ) {
-				try {
-					$this->save();
-					wp_redirect( admin_url( $this->_redirect_url . '&success' ) );
-				} catch ( Exception $e ) {
-					wp_redirect( admin_url( $this->_redirect_url . '&error=' . $e->getMessage() ) );
-				}
-			}
+		}
+
+		if ( $this->is_post() ) {
+			$this->process_save();
+		}
+	}
+
+	/**
+	 * Runs save(), handling the nonce/capability failure and the redirect.
+	 */
+	protected function process_save(): void {
+		if ( ! current_user_can( $this->_capability ) ) {
+			wp_die( esc_html__( 'You do not have permission to perform this action.', 'netivo' ) );
+		}
+		check_admin_referer( 'save_' . $this->_menu_slug );
+
+		try {
+			$this->save();
+			wp_safe_redirect( add_query_arg( 'success', '1', admin_url( $this->_redirect_url ) ) );
+			exit;
+		} catch ( Exception $e ) {
+			wp_safe_redirect( add_query_arg( 'error', rawurlencode( $e->getMessage() ), admin_url( $this->_redirect_url ) ) );
+			exit;
 		}
 	}
 
@@ -297,11 +316,8 @@ abstract class Page {
 	 * @return bool
 	 */
 	public function is_post(): bool {
-		if ( isset( $_POST[ 'save_' . $this->_menu_slug ] ) ) {
-			return true;
-		}
-
-		return false;
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- only checks the save button was clicked; process_save() verifies the nonce before anything is saved.
+		return isset( $_POST[ 'save_' . $this->_menu_slug ] );
 	}
 
 	/**
@@ -317,7 +333,7 @@ abstract class Page {
 		$obj  = new ReflectionClass( $this );
 		$data = $obj->getAttributes();
 		foreach ( $data as $attribute ) {
-			if ( $attribute->getName() == 'Netivo\Attributes\View' ) {
+			if ( $attribute->getName() === 'Netivo\Attributes\View' ) {
 				$name = $attribute->getArguments()[0];
 			}
 		}

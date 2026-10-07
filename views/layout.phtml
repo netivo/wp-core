@@ -16,15 +16,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 ?>
 
 <div class="wrap">
-	<h1 class="main-title"><?php echo $this->title; ?></h1>
-	<?php if(isset($_GET['success'])) : ?>
+	<h1 class="main-title"><?php echo esc_html( $this->title ); ?></h1>
+	<?php if ( isset( $_GET['success'] ) ) : ?>
 		<div class="notice updated">
-			<?= (!empty($_GET['success'])) ? $_GET['success'] : 'Zapisano pomyślnie!'; ?>
+			<?php echo ( ! empty( $_GET['success'] ) ) ? esc_html( wp_unslash( $_GET['success'] ) ) : 'Zapisano pomyślnie!'; ?>
 		</div>
 	<?php endif; ?>
-	<?php if(isset($_GET['error'])) : ?>
+	<?php if ( isset( $_GET['error'] ) ) : ?>
 		<div class="notice error">
-			<?= (!empty($_GET['error'])) ? $_GET['error'] : 'Wystąpił błąd!'; ?>
+			<?php echo ( ! empty( $_GET['error'] ) ) ? esc_html( wp_unslash( $_GET['error'] ) ) : 'Wystąpił błąd!'; ?>
 		</div>
 	<?php endif; ?>
 	

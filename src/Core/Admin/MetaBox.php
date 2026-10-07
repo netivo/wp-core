@@ -117,7 +117,7 @@ abstract class MetaBox {
 		$obj  = new ReflectionClass( $this );
 		$data = $obj->getAttributes();
 		foreach ( $data as $attribute ) {
-			if ( $attribute->getName() == 'Netivo\Attributes\View' ) {
+			if ( $attribute->getName() === 'Netivo\Attributes\View' ) {
 				$this->view_name = $attribute->getArguments()[0];
 			}
 		}
@@ -143,7 +143,7 @@ abstract class MetaBox {
 	 * Register metabox in admin panel.
 	 */
 	public function register_box(): void {
-		if ( empty( $this->template ) || ! in_array( 'page', $this->screen ) ) {
+		if ( empty( $this->template ) || ! in_array( 'page', $this->screen, true ) ) {
 			add_meta_box( $this->id, $this->title, [
 				$this,
 				'display'
@@ -151,8 +151,8 @@ abstract class MetaBox {
 		} else {
 			global $post;
 			if ( ! empty( $post ) ) {
-				if ( $this->template == 'home-page' ) {
-					if ( in_array( $post->ID, $this->get_page_on_front() ) ) {
+				if ( $this->template === 'home-page' ) {
+					if ( in_array( $post->ID, $this->get_page_on_front(), true ) ) {
 						add_meta_box( $this->id, $this->title, [
 							$this,
 							'display'
@@ -162,7 +162,7 @@ abstract class MetaBox {
 					if ( ! is_array( $this->template ) ) {
 						$this->template = array( $this->template );
 					}
-					if ( in_array( get_post_meta( $post->ID, '_wp_page_template', true ), $this->template ) ) {
+					if ( in_array( get_post_meta( $post->ID, '_wp_page_template', true ), $this->template, true ) ) {
 						add_meta_box( $this->id, $this->title, [
 							$this,
 							'display'
@@ -191,6 +191,7 @@ abstract class MetaBox {
 			$languages = icl_get_languages();
 			foreach ( $languages as $lang ) {
 				$id = apply_filters( 'wpml_object_id', $pof, 'page', false, $lang['language_code'] );
+				// phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- the filter can return false for "not found"; loose compare intentionally treats that like null and skips it.
 				if ( $id != null ) {
 					$ret[] = $id;
 				}
@@ -233,10 +234,10 @@ abstract class MetaBox {
 		if ( ! isset( $_POST[ $this->id . '_nonce' ] ) ) {
 			return $post_id;
 		}
-		if ( ! wp_verify_nonce( $_POST[ $this->id . '_nonce' ], 'save_' . $this->id ) ) {
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST[ $this->id . '_nonce' ] ) ), 'save_' . $this->id ) ) {
 			return $post_id;
 		}
-		if ( ! in_array( $_POST['post_type'], $this->screen ) ) {
+		if ( ! isset( $_POST['post_type'] ) || ! in_array( $_POST['post_type'], $this->screen, true ) ) {
 			return $post_id;
 		}
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {

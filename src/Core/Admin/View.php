@@ -94,4 +94,16 @@ class View {
 	public function __set( string $name, mixed $value ): void {
 		$this->_variables[ $name ] = $value;
 	}
+
+	/**
+	 * Proxies method calls from a view file to the page, e.g. $this->nonce_field().
+	 *
+	 * @param string $name Method name.
+	 * @param array $arguments Method arguments.
+	 *
+	 * @return mixed
+	 */
+	public function __call( string $name, array $arguments ): mixed {
+		return $this->_page->$name( ...$arguments );
+	}
 }

@@ -41,12 +41,16 @@ abstract class PostType {
 				register_post_type( $this->get_id(), $options );
 				if ( ! empty( $options['capabilities'] ) ) {
 					$role = get_role( 'administrator' );
-					foreach ( $options['capabilities'] as $capability ) {
-						$role->add_cap( $capability );
+					if ( ! empty( $role ) ) {
+						foreach ( $options['capabilities'] as $capability ) {
+							if ( ! $role->has_cap( $capability ) ) {
+								$role->add_cap( $capability );
+							}
+						}
 					}
 				}
 			} else {
-				throw new \Exception( 'Post type: \'' . $id . '\' already exists.' );
+				throw new \Exception( esc_html( 'Post type: \'' . $id . '\' already exists.' ) );
 			}
 		}
 	}
