@@ -3,7 +3,7 @@
   "description": "WP Core Library for Netivo themes",
   "minimum-stability": "stable",
   "license": "proprietary",
-  "version": "1.3",
+  "version": "1.3.1",
   "authors": [
     {
       "name": "netivo",

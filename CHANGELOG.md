@@ -1,5 +1,28 @@
 # Changelog
 
+## Version 1.3.1
+
+- Fixed `register` option being ignored when enqueuing styles/scripts, so assets marked for registration only are no longer also enqueued
+- Fixed `EntityManager::insert()` dropping columns with a falsy-but-valid value (`0`, `'0'`, `false`, `''`)
+- Fixed `EntityManager::count()` fetching all rows instead of using `SELECT COUNT(*)`
+- Fixed missing space in generated primary key column DDL, and columns with a default of `0` no longer losing their `DEFAULT` clause
+- Fixed admin page tabs never resolving because child pages were not stored (`Admin\Page::register_children()`)
+- Fixed `Admin\TermMeta` subclasses sharing the same nonce field name due to `self::` instead of `static::`
+- Fixed capabilities being re-added to the administrator role on every request instead of once
+- Escaped the admin page title and success/error notices in `views/layout.phtml` (reflected XSS)
+- Added a nonce and capability check to `Admin\Page` save handling (CSRF), via a new `Page::nonce_field()` helper theme views must call inside their save form
+- Hardened `Admin\Page` redirects: `wp_safe_redirect()` + `exit`, and URL-encoded error messages
+- Added missing `isset()`/sanitization checks for POST/GET/REQUEST data in `Admin\Page`, `Admin\MetaBox`, `Admin\BulkAction`
+- Added a `current_user_can( 'edit_term', ... )` check to `Admin\TermMeta::do_save()`
+- Replaced `var_dump()` debug output in `Admin\Panel` with `wp_trigger_error()`
+- Converted implicitly nullable parameters in `EntityManager` to explicit `?type` (PHP 8.4 deprecation)
+- Reduced reliance on dynamic `$wpdb` properties in `EntityManager` via a `table_name()` helper
+- Converted loose (`==`/`!=`) comparisons to strict ones throughout the codebase where safe, and documented the few left loose intentionally
+- Added the strict `true` argument to `in_array()` calls flagged by phpcs
+- Escaped annotation-parsing and post-type-registration exception messages
+- Removed small dead-code leftovers (`$key`, `$nextToken`, `$function`) flagged by phpcs
+- Upgraded `phpcompatibility/php-compatibility` so `composer lint` runs to completion
+
 ## Version 1.3
 
 - Added option to create WP CLI commands
