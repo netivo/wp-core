@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 1.3.2
+
+- Config files, views, and Gutenberg block paths now resolve child theme first, falling back to the parent/template theme (`Theme::resolve_path()`/`Theme::resolve_uri()`)
+- Fixed `supports` config entries in `'key' => [args]` form being silently skipped (e.g. `'custom-logo' => [...]`); plain string entries still work as before
+- `add_theme_support()` and `register_nav_menu()` now run on `after_setup_theme`, as WordPress expects, instead of directly in the theme constructor
+- `'html5'` support args no longer pass `script`/`style`, removed in WordPress 7.0
+- Menu names are now translated at registration time (`register_nav_menu()`), matching how sidebar names are already translated in `init_sidebars()`
+- **Breaking:** `Admin\BulkAction` now registers through WordPress core's `handle_bulk_actions-{$screen}` filter instead of parsing `$_GET`/`$_REQUEST` manually. This fixes bulk actions being silently broken on any screen other than the legacy `edit-shop_order` orders screen, including the WooCommerce HPOS orders screen (`woocommerce_page_wc-orders`, the default since WooCommerce 8.2) and any non-order post-type screen. `do_action()`'s signature changed from `do_action( array $data ): mixed` to `do_action( array $ids, string $redirect_url ): string` — subclasses must be updated.
+- `RestController::build_route()` now uses `$this->version` instead of a hardcoded `/v1`
+- `Admin\MetaBox::get_page_on_front()` now checks the `wpml_active_languages` filter first for WPML, falling back to the legacy `icl_get_languages()` only if that filter isn't registered
+- Raised `phpcs.xml.dist`'s `minimum_supported_wp_version` to 6.3 (matching the `strategy => defer` script-loading option already in use) and documented the WordPress/PHP minimums in the README
+- Reduced duplication: a shared `load_modules()` helper in `Theme`/`Admin\Panel` replaces the repeated `class_exists()`/`new` loader blocks; a shared `ResolvesViewName` trait replaces the duplicated reflection/attribute lookup in `Admin\Page`, `Admin\MetaBox`, `Admin\TermMeta` and `Gutenberg`; `Database\EntityManager::findAll()`/`count()` share a `build_where()` helper instead of duplicating the WHERE-clause builder
+- Split `Theme::init_custom_posts_and_taxonomies()` into `register_post_types()`, `apply_builtin_post_labels()`, `register_taxonomies()` and `seed_taxonomy_terms()`
+- Extracted the CSS/JS asset-resolution logic shared by `Theme::init_styles_and_scripts()` into `enqueue_configured_asset()`
+
 ## Version 1.3.1
 
 - Fixed `register` option being ignored when enqueuing styles/scripts, so assets marked for registration only are no longer also enqueued

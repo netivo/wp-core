@@ -84,7 +84,26 @@ abstract class Panel {
 	protected abstract function set_vars(): void;
 
 	/**
-	 * Init pages to Admin view.
+	 * Instantiates or calls $factory for each class name in $classes that exists, per
+	 * class_exists(). Non-string entries are skipped. Shared by the module loaders below
+	 * to avoid repeating the same "if not empty / class_exists / new" block.
+	 *
+	 * @param array $classes List of class names from configuration.
+	 * @param callable $factory Called with each existing class name.
+	 *
+	 * @return void
+	 */
+	protected function load_modules( array $classes, callable $factory ): void {
+		foreach ( $classes as $class ) {
+			if ( is_string( $class ) && class_exists( $class ) ) {
+				$factory( $class );
+			}
+		}
+	}
+
+	/**
+	 * Init pages to Admin view. Each entry carries its own 'children', so it doesn't fit
+	 * the plain class-list shape load_modules() handles for the other loaders below.
 	 */
 	protected function init_pages(): void {
 		if ( ! empty( $this->modules['pages'] ) ) {
@@ -104,11 +123,10 @@ abstract class Panel {
 	 */
 	protected function init_metaboxes(): void {
 		if ( ! empty( $this->modules['metabox'] ) ) {
-			foreach ( $this->modules['metabox'] as $meta ) {
-				if ( class_exists( $meta ) ) {
-					new $meta( $this->parent_class->get_view_path() );
-				}
-			}
+			$view_path = $this->parent_class->get_view_path();
+			$this->load_modules( $this->modules['metabox'], static function ( string $class ) use ( $view_path ) {
+				new $class( $view_path );
+			} );
 		}
 	}
 
@@ -117,11 +135,10 @@ abstract class Panel {
 	 */
 	protected function init_termmeta(): void {
 		if ( ! empty( $this->modules['term-meta'] ) ) {
-			foreach ( $this->modules['term-meta'] as $meta ) {
-				if ( class_exists( $meta ) ) {
-					new $meta( $this->parent_class->get_view_path() );
-				}
-			}
+			$view_path = $this->parent_class->get_view_path();
+			$this->load_modules( $this->modules['term-meta'], static function ( string $class ) use ( $view_path ) {
+				new $class( $view_path );
+			} );
 		}
 	}
 
@@ -130,11 +147,11 @@ abstract class Panel {
 	 */
 	protected function init_gutenberg(): void {
 		if ( ! empty( $this->modules['gutenberg'] ) ) {
-			foreach ( $this->modules['gutenberg'] as $gutenberg ) {
-				if ( class_exists( $gutenberg ) ) {
-					new $gutenberg( $this->include_path, $this->uri );
-				}
-			}
+			$include_path = $this->include_path;
+			$uri          = $this->uri;
+			$this->load_modules( $this->modules['gutenberg'], static function ( string $class ) use ( $include_path, $uri ) {
+				new $class( $include_path, $uri );
+			} );
 		}
 	}
 
@@ -143,11 +160,9 @@ abstract class Panel {
 	 */
 	protected function init_bulkactions(): void {
 		if ( ! empty( $this->modules['bulk'] ) ) {
-			foreach ( $this->modules['bulk'] as $bulk ) {
-				if ( class_exists( $bulk ) ) {
-					new $bulk();
-				}
-			}
+			$this->load_modules( $this->modules['bulk'], static function ( string $class ) {
+				new $class();
+			} );
 		}
 	}
 

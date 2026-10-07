@@ -10,7 +10,7 @@
 namespace Netivo\Core\Admin;
 
 use Exception;
-use ReflectionClass;
+use Netivo\Core\Traits\ResolvesViewName;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	header( 'HTTP/1.0 403 Forbidden' );
@@ -25,6 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * and render their content from a view file.
  */
 abstract class Page {
+
+	use ResolvesViewName;
 
 	/**
 	 * Name of the page used as view name
@@ -330,20 +332,7 @@ abstract class Page {
 	 * Get view path for current page.
 	 */
 	public function get_view_file(): string {
-		$obj  = new ReflectionClass( $this );
-		$data = $obj->getAttributes();
-		foreach ( $data as $attribute ) {
-			if ( $attribute->getName() === 'Netivo\Attributes\View' ) {
-				$name = $attribute->getArguments()[0];
-			}
-		}
-		if ( empty( $name ) ) {
-			$filename = $obj->getFileName();
-			$filename = str_replace( '.php', '', $filename );
-
-			$name = basename( $filename );
-			$name = strtolower( $name );
-		}
+		$name = $this->resolve_view_attribute( 'Netivo\Attributes\View' ) ?? $this->resolve_view_name_from_filename();
 
 		return $this->_views_path . '/admin/pages/' . $name . '.phtml';
 	}

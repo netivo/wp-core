@@ -10,7 +10,7 @@
 
 namespace Netivo\Core;
 
-use ReflectionClass;
+use Netivo\Core\Traits\ResolvesViewName;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	header( 'HTTP/1.0 403 Forbidden' );
@@ -23,6 +23,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Parent class which handles gutenberg block registration.
  */
 abstract class Gutenberg {
+
+	use ResolvesViewName;
 
 	/**
 	 * Callback name.
@@ -45,22 +47,11 @@ abstract class Gutenberg {
 	 * @throws \Exception When error.
 	 */
 	public function register_block(): void {
-		$obj  = new ReflectionClass( $this );
-		$data = $obj->getAttributes();
-		foreach ( $data as $attribute ) {
-			if ( $attribute->getName() === 'Netivo\Attributes\Block' ) {
-				$name = $attribute->getArguments()[0];
-			}
-		}
-		if ( empty( $name ) ) {
-			$filename = $obj->getFileName();
-			$filename = str_replace( '.php', '', $filename );
-			$name     = basename( $filename );
-			$name     = 'src/views/gutenberg/' . strtolower( $name );
-		}
+		$name = $this->resolve_view_attribute( 'Netivo\Attributes\Block' )
+			?? ( 'src/views/gutenberg/' . $this->resolve_view_name_from_filename() );
 
-		$block_json = get_template_directory() . '/' . strtolower( $name ) . '/block.json';
-		if ( file_exists( $block_json ) ) {
+		$block_json = Theme::resolve_path( '/' . strtolower( $name ) . '/block.json' );
+		if ( null !== $block_json ) {
 			$args = [];
 			if ( ! empty( $this->callback ) ) {
 				$args['render_callback'] = array( $this, $this->callback );
@@ -68,7 +59,7 @@ abstract class Gutenberg {
 
 			register_block_type( $block_json, $args );
 		} else {
-			throw new \Exception( 'Block json not found.' );
+			throw new \Exception( esc_html( 'Block json not found.' ) );
 		}
 
 	}
