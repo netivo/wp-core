@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## Version 1.4
 
 - Added a PHPUnit + Brain Monkey test suite (`composer test`, 106 tests) covering every class in `src/Core`: `Annotations` parsing, `Database\Annotations`/`Entity`/`EntityManager` (`build_where()`, `insert()`/`update()`, table creation DDL), `Theme` (config merge/child-theme resolution, `setup_theme_support()`, asset versioning, capability granting), `Traits\ResolvesViewName`, `Admin\BulkAction`/`TermMeta`/`MetaBox`/`Page`/`Panel`/`View`, `RestController`, `Endpoint`, `Gutenberg`, `PostType` and `CliCommand`
 - Fixed a `tests/fixtures` vs `tests/Fixtures` directory-casing mismatch that only worked by accident on case-insensitive filesystems; split into `tests/Fixtures/` (autoloaded PHP classes) and `tests/stubs/` (non-autoloaded fixtures)
