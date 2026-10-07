@@ -31,6 +31,21 @@ Then in `Main`: `\Netivo\Theme\Main::$admin_panel = \Netivo\Theme\Admin\Panel::c
 
 The panel reads `modules.admin` and creates each listed class. The sections below cover each key.
 
+`custom_header()` runs on `admin_enqueue_scripts`, which never reaches inside the block
+editor's iframed canvas (WordPress 7.1+ always iframes it; 7.0 does once every block uses
+`apiVersion: 3` — see [frontend.md](frontend.md#gutenberg-blocks)). For CSS/JS that must
+run *inside* the canvas itself, override `custom_block_editor_assets()` instead, which
+runs on `enqueue_block_assets` (fires on both admin and front end — check `is_admin()`
+first if front-end output isn't wanted):
+
+```php
+protected function custom_block_editor_assets(): void {
+    if ( is_admin() ) {
+        wp_enqueue_style( 'theme-editor-canvas', $this->uri . '/assets/css/editor-canvas.css' );
+    }
+}
+```
+
 ## Pages
 
 A page adds a menu item and a settings screen. Extend `Netivo\Core\Admin\Page`:
@@ -41,11 +56,11 @@ namespace Netivo\Theme\Admin;
 use Netivo\Core\Admin\Page as CorePage;
 
 class Settings extends CorePage {
-    protected string $_page_title = 'Theme settings';
-    protected string $_menu_text  = 'Theme';
-    protected string $_menu_slug  = 'theme-settings';
-    protected string $_icon       = 'dashicons-admin-generic';
-    protected ?int   $_position   = 61;
+    protected string $page_title = 'Theme settings';
+    protected string $menu_text  = 'Theme';
+    protected string $menu_slug  = 'theme-settings';
+    protected string $icon       = 'dashicons-admin-generic';
+    protected ?int   $position   = 61;
 
     public function do_action(): void {
         $this->view->options = get_option( 'theme_options', [] );
@@ -57,10 +72,12 @@ class Settings extends CorePage {
 }
 ```
 
-- `$_type` (default `main`) can be `subpage` (with `$_parent`) or `tab` (a tab of a parent page, with `$_parent`).
+- `$type` (default `main`) can be `subpage` (with `$parent`) or `tab` (a tab of a parent page, with `$parent`).
 - `do_action()` runs before rendering. Set view variables on `$this->view`.
 - `save()` runs on POST when the form contains `save_<menu slug>`. Throw an `\Exception` to show an error message; the message is passed back in the URL.
 - The view is `<views>/admin/pages/<class name lowercase>.phtml`. Use `#[View('name')]` from `Netivo\Attributes` (if your project provides it) to choose another name.
+- The page's save form must call `<?php $this->nonce_field(); ?>` inside its `<form>` — `save()` is only reached after the nonce and the page's `$capability` are checked.
+- Older code using the `_`-prefixed property names (`$_page_title`, `$_menu_slug`, etc.) still works but is deprecated — see [migration-1.4.0.md](migration-1.4.0.md).
 
 The page view can use `$this->options` (variables set with `$this->view`) and a form that posts with a `save_<menu slug>` button. The shared layout (`views/layout.phtml` in wp-core) prints the title and the success/error notices.
 
@@ -71,7 +88,7 @@ Sub-pages and tabs are declared in config as children:
     [
         'class'    => \Netivo\Theme\Admin\Settings::class,
         'children' => [
-            [ 'class' => \Netivo\Theme\Admin\SettingsGeneral::class ], // $_type = 'tab', $_parent = 'theme-settings'
+            [ 'class' => \Netivo\Theme\Admin\SettingsGeneral::class ], // $type = 'tab', $parent = 'theme-settings'
         ],
     ],
 ],
@@ -149,16 +166,18 @@ class Export extends CoreBulkAction {
     protected string $id   = 'export_selected';
     protected string $name = 'Export selected';
 
-    public function do_action( array $data ): mixed {
-        // $data is an array of selected post IDs
-        return null;
+    public function do_action( array $ids, string $redirect_url ): string {
+        // $ids is an array of selected post/term/order IDs (already cast to int)
+        return add_query_arg( 'exported', count( $ids ), $redirect_url );
     }
 }
 ```
 
-Set `$screen` to the list screen (default `edit-post`).
-
-**Gotcha:** `action()` only runs when the list is `shop_order` (WooCommerce orders), regardless of `$screen`. To use the action elsewhere, change the check in your subclass or in wp-core.
+Set `$screen` to the list-table screen id: `edit-post` (default), `edit-shop_order` (legacy
+WooCommerce orders), `woocommerce_page_wc-orders` (WooCommerce HPOS orders, the default
+since WooCommerce 8.2), or any other list-table screen. Registration and nonce
+verification go through WordPress core's `handle_bulk_actions-{$screen}` filter, so the
+same subclass shape works on every screen without screen-specific handling.
 
 ## Gutenberg in the editor
 

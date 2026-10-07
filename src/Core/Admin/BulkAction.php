@@ -53,8 +53,23 @@ abstract class BulkAction {
 
 	/**
 	 * BulkAction constructor.
+	 *
+	 * @param bool $auto_register Whether to register WordPress hooks immediately. Pass
+	 *                             false to construct the instance without touching any
+	 *                             hook, then call register() explicitly when ready.
+	 *                             Defaults to true to match the previous behaviour.
 	 */
-	public function __construct() {
+	public function __construct( bool $auto_register = true ) {
+		if ( $auto_register ) {
+			$this->register();
+		}
+	}
+
+	/**
+	 * Registers this bulk action's WordPress hooks. Called automatically from the
+	 * constructor unless it was built with $auto_register = false.
+	 */
+	public function register(): void {
 		add_filter( 'bulk_actions-' . $this->screen, [ $this, 'add_action' ] );
 		add_filter( 'handle_bulk_actions-' . $this->screen, [ $this, 'handle' ], 10, 3 );
 	}

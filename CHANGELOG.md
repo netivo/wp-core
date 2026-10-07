@@ -1,5 +1,23 @@
 # Changelog
 
+## Version 1.4
+
+- Added a PHPUnit + Brain Monkey test suite (`composer test`, 106 tests) covering every class in `src/Core`: `Annotations` parsing, `Database\Annotations`/`Entity`/`EntityManager` (`build_where()`, `insert()`/`update()`, table creation DDL), `Theme` (config merge/child-theme resolution, `setup_theme_support()`, asset versioning, capability granting), `Traits\ResolvesViewName`, `Admin\BulkAction`/`TermMeta`/`MetaBox`/`Page`/`Panel`/`View`, `RestController`, `Endpoint`, `Gutenberg`, `PostType` and `CliCommand`
+- Fixed a `tests/fixtures` vs `tests/Fixtures` directory-casing mismatch that only worked by accident on case-insensitive filesystems; split into `tests/Fixtures/` (autoloaded PHP classes) and `tests/stubs/` (non-autoloaded fixtures)
+- Added PHPStan at level 6 (`composer analyse`), using `szepeviktor/phpstan-wordpress` for WordPress stubs, with a baseline (`phpstan-baseline.neon`) covering accepted non-issues (missing array-shape generics, the optional WP-CLI/Polylang integrations, and action callbacks that intentionally return a value for direct callers)
+- Fixed a latent `TypeError` in `Annotations::cast_value()`: its parameter was typed `string` but composite `{...}` annotation values are arrays, so any annotation using that syntax would fatal
+- Fixed `Annotations::parse_annotations()` reusing a stale (or undefined, on the first match) `$name` from a previous loop iteration when a match's `args` group wasn't set
+- Removed redundant `is_array()`/`is_int()` checks in `EntityManager` now that `findAll()`'s parameters are properly nullable-typed
+- Added missing type hints to `Admin\Panel::__construct()` and `Admin\Panel::init_header()`/`custom_header()`
+- Fixed `Admin\TermMeta::$taxonomy`'s `@var` tag to match its native `array|string` type
+- Documented `Admin\View`'s magic `$title`/`$tab` properties with `@property` tags
+- Expanded the test suite from 4 to all 18 classes in `src/Core` (113 → 136 tests over this work), adding `Database\Entity`, `Database\Annotations\Table`/`Column`, `Traits\ResolvesViewName`, `Admin\BulkAction`/`TermMeta`/`MetaBox`/`Page`/`Panel`/`View`, `RestController`, `Endpoint`, `Gutenberg`, `PostType` and `CliCommand`
+- Hardened `EntityManager`'s SQL generation (S5): `findAll()`/`count()`'s `$where` and `findAll()`'s `$order` now whitelist column names against the entity's own annotated columns, restrict `$where` operators and placeholder types to a fixed allow-list, and restrict `$order` directions to `ASC`/`DESC` — an unrecognized entry is dropped rather than concatenated into the query. `LIKE`/`NOT LIKE` values are now escaped with `$wpdb->esc_like()`
+- **Deprecated** (backward-compatible, no removal scheduled yet — see `docs/migration-1.4.0.md`): `Admin\Page`, `Admin\MetaBox`, `Admin\TermMeta`, `Admin\BulkAction`, `Gutenberg`, `RestController`, `Endpoint`, `PostType` and `CliCommand` no longer *have* to wire their WordPress hooks inside the constructor (R9) — each now accepts an `$auto_register = true` constructor argument and exposes a `register()` method; passing `false` builds the instance without touching any hook, for registering explicitly later. The default preserves today's behavior exactly
+- **Deprecated** (backward-compatible, no removal scheduled yet — see `docs/migration-1.4.0.md`): `Admin\Page`'s `_`-prefixed configuration properties (`$_type`, `$_menu_slug`, `$_capability`, etc., R10) are renamed to drop the prefix (`$type`, `$menu_slug`, `$capability`, ...). A subclass overriding an old property name still works exactly as before, but now triggers an `E_USER_DEPRECATED` notice naming the new property to use
+- Added `Admin\Panel::custom_block_editor_assets()` (D7), called on `enqueue_block_assets`, for assets that must reach the block editor's canvas — which `admin_enqueue_scripts`/`custom_header()` can no longer reach once the canvas is iframed (WordPress 7.1+ always; WordPress 7.0 once every block uses `apiVersion: 3`). Concrete no-op by default, so no existing `Panel` subclass needs to implement it
+- Documented the `apiVersion: 3` requirement for `block.json` and the new `custom_block_editor_assets()` hook in `docs/frontend.md`/`docs/admin.md`; fixed two stale doc sections describing already-fixed behavior (`RestController`'s hardcoded `/v1`, and `BulkAction`'s pre-HPOS `shop_order`-only gotcha and old `do_action()` signature)
+
 ## Version 1.3.2
 
 - Config files, views, and Gutenberg block paths now resolve child theme first, falling back to the parent/template theme (`Theme::resolve_path()`/`Theme::resolve_uri()`)

@@ -51,8 +51,10 @@ abstract class Panel {
 
 	/**
 	 * Panel constructor.
+	 *
+	 * @param Theme $parent Parent theme instance.
 	 */
-	public function __construct( $parent ) {
+	public function __construct( Theme $parent ) {
 		$this->parent_class = $parent;
 		$this->set_vars();
 
@@ -61,6 +63,7 @@ abstract class Panel {
 		}
 
 		add_action( 'admin_enqueue_scripts', [ $this, 'init_header' ] );
+		add_action( 'enqueue_block_assets', [ $this, 'init_block_editor_assets' ] );
 		try {
 			$this->init_pages();
 			$this->init_metaboxes();
@@ -175,8 +178,10 @@ abstract class Panel {
 
 	/**
 	 * Initializes scripts and styles loaded in admin page.
+	 *
+	 * @param string $page Current admin page hook suffix.
 	 */
-	public function init_header( $page ): void {
+	public function init_header( string $page ): void {
 		wp_enqueue_script( 'jquery' );
 		wp_enqueue_script( 'thickbox' );
 		wp_enqueue_style( 'thickbox' );
@@ -198,5 +203,38 @@ abstract class Panel {
 	 *
 	 * @return void
 	 */
-	protected abstract function custom_header( $page ): void;
+	protected abstract function custom_header( string $page ): void;
+
+	/**
+	 * Enqueues assets that must reach the block editor's canvas.
+	 *
+	 * WordPress 7.0 iframes the block editor's canvas once every registered block uses
+	 * `apiVersion: 3`; WordPress 7.1 iframes it unconditionally, including when legacy
+	 * meta boxes are registered. Assets enqueued via admin_enqueue_scripts (init_header(),
+	 * custom_header()) never reach inside that iframe. Anything that needs to style or
+	 * script the editor canvas itself — not just the surrounding admin chrome — must be
+	 * enqueued here instead, on enqueue_block_assets, which WordPress loads both outside
+	 * and inside the iframe.
+	 *
+	 * Called automatically on enqueue_block_assets; this hook also fires on the front end,
+	 * so check is_admin() first if front-end output isn't wanted. Override
+	 * custom_block_editor_assets() to add theme-specific editor-canvas assets.
+	 */
+	public function init_block_editor_assets(): void {
+		$this->custom_block_editor_assets();
+	}
+
+	/**
+	 * Adds theme-specific assets that must reach the block editor's canvas.
+	 * Called from init_block_editor_assets() on enqueue_block_assets. See that method's
+	 * docblock for why this is a separate hook from custom_header()/admin_enqueue_scripts.
+	 *
+	 * Concrete no-op by default (unlike custom_header(), which every Panel already had to
+	 * implement): most themes don't need editor-canvas assets, so adding this hook must
+	 * not force every existing Panel subclass to implement a new method.
+	 *
+	 * @return void
+	 */
+	protected function custom_block_editor_assets(): void {
+	}
 }

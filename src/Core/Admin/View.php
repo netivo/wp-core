@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Renders an admin page: the shared layout around the page's own view file.
  * Variables set through magic properties are available in the layout and the page view.
+ *
+ * @property string $title Page title, set by Page::display() before rendering.
+ * @property string $tab Current tab slug, set by Page::display() when the page is a tab.
  */
 class View {
 	/**
