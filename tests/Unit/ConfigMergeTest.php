@@ -14,8 +14,8 @@ use ReflectionMethod;
 #[CoversMethod( Theme::class, 'init_configuration' )]
 class ConfigMergeTest extends TestCase {
 
-	private const PARENT_DIR = __DIR__ . '/../fixtures/parent-theme';
-	private const CHILD_DIR  = __DIR__ . '/../fixtures/child-theme';
+	private const PARENT_DIR = __DIR__ . '/../stubs/parent-theme';
+	private const CHILD_DIR  = __DIR__ . '/../stubs/child-theme';
 
 	/**
 	 * Builds a Theme instance (skipping the constructor) and runs init_configuration() on it.

@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Added a PHPUnit + Brain Monkey test suite (`composer test`) covering `Annotations` parsing, `Database\Annotations`, `EntityManager`'s SQL generation (`build_where()`, `insert()`/`update()`, table creation DDL) and `Theme`'s config merge/child-theme resolution
+- Added a PHPUnit + Brain Monkey test suite (`composer test`, 106 tests) covering every class in `src/Core`: `Annotations` parsing, `Database\Annotations`/`Entity`/`EntityManager` (`build_where()`, `insert()`/`update()`, table creation DDL), `Theme` (config merge/child-theme resolution, `setup_theme_support()`, asset versioning, capability granting), `Traits\ResolvesViewName`, `Admin\BulkAction`/`TermMeta`/`MetaBox`/`Page`/`Panel`/`View`, `RestController`, `Endpoint`, `Gutenberg`, `PostType` and `CliCommand`
+- Fixed a `tests/fixtures` vs `tests/Fixtures` directory-casing mismatch that only worked by accident on case-insensitive filesystems; split into `tests/Fixtures/` (autoloaded PHP classes) and `tests/stubs/` (non-autoloaded fixtures)
 - Added PHPStan at level 6 (`composer analyse`), using `szepeviktor/phpstan-wordpress` for WordPress stubs, with a baseline (`phpstan-baseline.neon`) covering accepted non-issues (missing array-shape generics, the optional WP-CLI/Polylang integrations, and action callbacks that intentionally return a value for direct callers)
 - Fixed a latent `TypeError` in `Annotations::cast_value()`: its parameter was typed `string` but composite `{...}` annotation values are arrays, so any annotation using that syntax would fatal
 - Fixed `Annotations::parse_annotations()` reusing a stale (or undefined, on the first match) `$name` from a previous loop iteration when a match's `args` group wasn't set
