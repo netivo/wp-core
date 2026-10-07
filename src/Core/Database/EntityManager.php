@@ -247,6 +247,38 @@ class EntityManager {
 	}
 
 	/**
+	 * Builds a " WHERE ..." SQL fragment from a where-options array, or '' when none is given.
+	 * Shared by findAll() and count().
+	 *
+	 * @param array|null $where Where options, each value shaped like
+	 *                          ['type' => '%s', 'value' => ..., 'operator' => optional].
+	 *
+	 * @return string
+	 */
+	protected static function build_where( ?array $where ): string {
+		global $wpdb;
+
+		if ( empty( $where ) ) {
+			return '';
+		}
+
+		$parts = [];
+		foreach ( $where as $key => $value ) {
+			if ( array_key_exists( 'operator', $value ) ) {
+				if ( $value['operator'] !== 'LIKE' ) {
+					$parts[] = $wpdb->prepare( $key . ' ' . $value['operator'] . ' ' . $value['type'], $value['value'] );
+				} else {
+					$parts[] = $wpdb->prepare( $key . ' LIKE ' . $value['type'], '%' . $value['value'] . '%' );
+				}
+			} else {
+				$parts[] = $wpdb->prepare( $key . ' = ' . $value['type'], $value['value'] );
+			}
+		}
+
+		return ' WHERE ' . implode( ' AND ', $parts );
+	}
+
+	/**
 	 * Finds all entities matching query.
 	 *
 	 * @param array|null $where Array with where options.
@@ -264,28 +296,7 @@ class EntityManager {
 		if ( ! empty( $table ) ) {
 			$name = self::table_name( $table );
 
-			$sql = "SELECT * FROM {$name}";
-
-			$where_s = '';
-			if ( $where && is_array( $where ) ) {
-				$where_s = ' WHERE ';
-				$i       = 0;
-				foreach ( $where as $key => $value ) {
-					if ( array_key_exists( 'operator', $value ) ) {
-						if ( $value['operator'] !== 'LIKE' ) {
-							$where_s .= $wpdb->prepare( $key . ' ' . $value['operator'] . ' ' . $value['type'], $value['value'] );
-						} else {
-							$where_s .= $wpdb->prepare( $key . ' LIKE ' . $value['type'], '%' . $value['value'] . '%' );
-						}
-					} else {
-						$where_s .= $wpdb->prepare( $key . ' = ' . $value['type'], $value['value'] );
-					}
-					if ( $i !== count( $where ) - 1 ) {
-						$where_s .= ' AND ';
-					}
-					$i ++;
-				}
-			}
+			$sql = "SELECT * FROM {$name}" . self::build_where( $where );
 
 			$order_s = '';
 			if ( $order && is_array( $order ) ) {
@@ -310,7 +321,7 @@ class EntityManager {
 				}
 			}
 
-			$sql = $sql . $where_s . $order_s . $limit_s;
+			$sql = $sql . $order_s . $limit_s;
 
 			$res = $wpdb->get_results( $sql );
 
@@ -348,30 +359,7 @@ class EntityManager {
 		if ( ! empty( $table ) ) {
 			$name = self::table_name( $table );
 
-			$sql = "SELECT COUNT(*) FROM {$name}";
-
-			$where_s = '';
-			if ( $where && is_array( $where ) ) {
-				$where_s = ' WHERE ';
-				$i       = 0;
-				foreach ( $where as $key => $value ) {
-					if ( array_key_exists( 'operator', $value ) ) {
-						if ( $value['operator'] !== 'LIKE' ) {
-							$where_s .= $wpdb->prepare( $key . ' ' . $value['operator'] . ' ' . $value['type'], $value['value'] );
-						} else {
-							$where_s .= $wpdb->prepare( $key . ' LIKE ' . $value['type'], '%' . $value['value'] . '%' );
-						}
-					} else {
-						$where_s .= $wpdb->prepare( $key . ' = ' . $value['type'], $value['value'] );
-					}
-					if ( $i !== count( $where ) - 1 ) {
-						$where_s .= ' AND ';
-					}
-					$i ++;
-				}
-			}
-
-			$sql = $sql . $where_s;
+			$sql = "SELECT COUNT(*) FROM {$name}" . self::build_where( $where );
 
 			return (int) $wpdb->get_var( $sql );
 		}

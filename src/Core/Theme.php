@@ -76,23 +76,10 @@ abstract class Theme {
 	protected function __construct() {
 		$this->init_configuration();
 
-		if ( array_key_exists( 'admin_bar', $this->configuration ) ) {
-			if ( ! $this->configuration['admin_bar'] ) {
-				add_action( 'after_setup_theme', [ $this, 'remove_admin_bar' ] );
-			}
-		}
+		add_action( 'after_setup_theme', [ $this, 'setup_theme_support' ] );
 
-		if ( array_key_exists( 'supports', $this->configuration ) ) {
-			foreach ( $this->configuration['supports'] as $support ) {
-				if ( is_string( $support ) ) {
-					$args = ( array_key_exists( $support, $this->configuration['supports'] ) ) ? $this->configuration['supports'][ $support ] : [];
-					if ( empty( $args ) ) {
-						add_theme_support( $support );
-					} else {
-						add_theme_support( $support, $args );
-					}
-				}
-			}
+		if ( array_key_exists( 'admin_bar', $this->configuration ) && ! $this->configuration['admin_bar'] ) {
+			add_action( 'after_setup_theme', [ $this, 'remove_admin_bar' ] );
 		}
 
 		$this->init_security();
@@ -117,6 +104,64 @@ abstract class Theme {
 	}
 
 	/**
+	 * Resolves a path relative to the theme root, preferring the active child theme over
+	 * the parent/template theme. Returns null when the path exists in neither.
+	 *
+	 * @param string $relative_path Path relative to the theme root, e.g. '/config/main.config.php'.
+	 *
+	 * @return string|null
+	 */
+	public static function resolve_path( string $relative_path ): ?string {
+		if ( file_exists( get_stylesheet_directory() . $relative_path ) ) {
+			return get_stylesheet_directory() . $relative_path;
+		}
+
+		if ( file_exists( get_template_directory() . $relative_path ) ) {
+			return get_template_directory() . $relative_path;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Resolves the public URI for a path relative to the theme root, preferring the active
+	 * child theme over the parent/template theme. Returns null when the path exists in neither.
+	 *
+	 * @param string $relative_path Path relative to the theme root, e.g. '/assets/css/style.css'.
+	 *
+	 * @return string|null
+	 */
+	public static function resolve_uri( string $relative_path ): ?string {
+		if ( file_exists( get_stylesheet_directory() . $relative_path ) ) {
+			return get_stylesheet_directory_uri() . $relative_path;
+		}
+
+		if ( file_exists( get_template_directory() . $relative_path ) ) {
+			return get_template_directory_uri() . $relative_path;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Instantiates or calls $factory for each class name in $classes that exists, per
+	 * class_exists(). Non-string entries are skipped. Shared by the module loaders below
+	 * to avoid repeating the same "if not empty / class_exists / new" block.
+	 *
+	 * @param array $classes List of class names from configuration.
+	 * @param callable $factory Called with each existing class name.
+	 *
+	 * @return void
+	 */
+	protected function load_modules( array $classes, callable $factory ): void {
+		foreach ( $classes as $class ) {
+			if ( is_string( $class ) && class_exists( $class ) ) {
+				$factory( $class );
+			}
+		}
+	}
+
+	/**
 	 * Gets the configuration from config files.
 	 * Config files must return an array with configuration.
 	 * Available config files are:
@@ -130,47 +175,90 @@ abstract class Theme {
 	 *
 	 * It is possible but not recommended to use single file configuration.
 	 *
+	 * Config files are resolved child theme first, then parent/template theme, the same as
+	 * assets. Label strings inside config files must NOT be passed through __() at this
+	 * point: config files are loaded before the text domain is available, which raises a
+	 * "_load_textdomain_just_in_time" notice on WordPress 6.7+. Keep labels as plain strings
+	 * and translate them where they're used (see init_sidebars()).
+	 *
 	 * @return void
 	 */
 	protected function init_configuration(): void {
-		if ( file_exists( get_template_directory() . "/config/" ) ) {
-			$imagesConfig   = array();
-			$postsConfig    = array();
-			$menuConfig     = array();
-			$assetsConfig   = array();
-			$sidebarsConfig = array();
-			$mainConfig     = array();
-			$modulesConfig  = array();
+		if ( null === self::resolve_path( '/config/' ) ) {
+			return;
+		}
 
-			$config_dir = get_template_directory() . "/config/";
-			if ( file_exists( $config_dir . 'images.config.php' ) ) {
-				$imagesConfig = include $config_dir . 'images.config.php';
-			}
-			if ( file_exists( $config_dir . 'sidebars.config.php' ) ) {
-				$sidebarsConfig = include $config_dir . 'sidebars.config.php';
-			}
-			if ( file_exists( $config_dir . 'posts.config.php' ) ) {
-				$postsConfig = include $config_dir . 'posts.config.php';
-			}
-			if ( file_exists( $config_dir . 'menu.config.php' ) ) {
-				$menuConfig = include $config_dir . 'menu.config.php';
-			}
-			if ( file_exists( $config_dir . 'assets.config.php' ) ) {
-				$assetsConfig = include $config_dir . 'assets.config.php';
-			}
-			if ( file_exists( $config_dir . 'main.config.php' ) ) {
-				$mainConfig = include $config_dir . 'main.config.php';
-			}
-			if ( file_exists( $config_dir . 'modules.config.php' ) ) {
-				$modulesConfig = include $config_dir . 'modules.config.php';
-			}
+		$config_files = [
+			'main'       => 'main.config.php',
+			'images'     => 'images.config.php',
+			'posts'      => 'posts.config.php',
+			'menu'       => 'menu.config.php',
+			'assets'     => 'assets.config.php',
+			'sidebars'   => 'sidebars.config.php',
+			'modules'    => 'modules.config.php',
+		];
 
-			$this->configuration = array_merge( $this->configuration, $mainConfig, $imagesConfig, $postsConfig, $menuConfig, $assetsConfig, $sidebarsConfig, $modulesConfig );
+		$configs = [];
+		foreach ( $config_files as $key => $file ) {
+			$path            = self::resolve_path( '/config/' . $file );
+			$configs[ $key ] = ( null !== $path ) ? include $path : array();
+		}
 
-			if ( ! empty( $this->configuration['modules']['views_path'] ) ) {
-				$this->view_path = $this->configuration['modules']['views_path'];
-			} else {
-				$this->view_path = get_template_directory() . '/src/views';
+		$this->configuration = array_merge(
+			$this->configuration,
+			$configs['main'],
+			$configs['images'],
+			$configs['posts'],
+			$configs['menu'],
+			$configs['assets'],
+			$configs['sidebars'],
+			$configs['modules']
+		);
+
+		if ( ! empty( $this->configuration['modules']['views_path'] ) ) {
+			$this->view_path = $this->configuration['modules']['views_path'];
+		} else {
+			$this->view_path = self::resolve_path( '/src/views' ) ?? get_template_directory() . '/src/views';
+		}
+	}
+
+	/**
+	 * Registers theme support flags and navigation menus on after_setup_theme, as WordPress
+	 * expects (add_theme_support()/register_nav_menu() should not run earlier).
+	 * Array structure for 'supports':
+	 * [
+	 *  'supports' => [
+	 *      '#support_name', // plain support flag, no args
+	 *      '#support_name_with_args' => [ ... ], // support flag with args, e.g. 'custom-logo' => [ 'height' => 100 ]
+	 *  ]
+	 * ]
+	 *
+	 * @return void
+	 */
+	public function setup_theme_support(): void {
+		if ( array_key_exists( 'supports', $this->configuration ) ) {
+			foreach ( $this->configuration['supports'] as $key => $value ) {
+				if ( is_int( $key ) ) {
+					add_theme_support( $value );
+					continue;
+				}
+
+				if ( 'html5' === $key && is_array( $value ) ) {
+					// 'script'/'style' html5 support args were removed in WordPress 7.0.
+					$value = array_values( array_diff( $value, [ 'script', 'style' ] ) );
+				}
+
+				if ( empty( $value ) ) {
+					add_theme_support( $key );
+				} else {
+					add_theme_support( $key, $value );
+				}
+			}
+		}
+
+		if ( array_key_exists( 'menu', $this->configuration ) ) {
+			foreach ( $this->configuration['menu'] as $key => $menu ) {
+				register_nav_menu( $key, __( $menu['name'], 'netivo' ) );
 			}
 		}
 	}
@@ -200,12 +288,6 @@ abstract class Theme {
 	 * Initialize front end site filters and actions
 	 */
 	protected function init_front_site(): void {
-		if ( array_key_exists( 'menu', $this->configuration ) ) {
-			foreach ( $this->configuration['menu'] as $key => $menu ) {
-				register_nav_menu( $key, $menu['name'] );
-			}
-		}
-
 		add_action( 'widgets_init', [ $this, 'init_widgets' ] );
 
 		add_action( 'init', [ $this, 'init_sidebars' ] );
@@ -222,11 +304,9 @@ abstract class Theme {
 	 */
 	protected function init_customizer(): void {
 		if ( ! empty( $this->configuration['modules']['customizer'] ) ) {
-			foreach ( $this->configuration['modules']['customizer'] as $customizer ) {
-				if ( class_exists( $customizer ) ) {
-					new $customizer();
-				}
-			}
+			$this->load_modules( $this->configuration['modules']['customizer'], static function ( string $class ) {
+				new $class();
+			} );
 		}
 	}
 
@@ -238,11 +318,9 @@ abstract class Theme {
 	 */
 	protected function init_database(): void {
 		if ( ! empty( $this->configuration['modules']['database'] ) ) {
-			foreach ( $this->configuration['modules']['database'] as $dbTable ) {
-				if ( class_exists( $dbTable ) ) {
-					EntityManager::createTable( $dbTable );
-				}
-			}
+			$this->load_modules( $this->configuration['modules']['database'], static function ( string $class ) {
+				EntityManager::createTable( $class );
+			} );
 		}
 	}
 
@@ -253,11 +331,9 @@ abstract class Theme {
 	 */
 	protected function init_endpoints(): void {
 		if ( ! empty( $this->configuration['modules']['endpoint'] ) ) {
-			foreach ( $this->configuration['modules']['endpoint'] as $endpoint ) {
-				if ( class_exists( $endpoint ) ) {
-					new $endpoint();
-				}
-			}
+			$this->load_modules( $this->configuration['modules']['endpoint'], static function ( string $class ) {
+				new $class();
+			} );
 		}
 	}
 
@@ -269,11 +345,11 @@ abstract class Theme {
 	 */
 	protected function init_gutenberg(): void {
 		if ( ! empty( $this->configuration['modules']['gutenberg'] ) ) {
-			foreach ( $this->configuration['modules']['gutenberg'] as $gutenberg ) {
-				if ( class_exists( $gutenberg ) ) {
-					new $gutenberg( $this->get_view_path(), str_replace( get_stylesheet_directory(), get_stylesheet_directory_uri(), $this->get_view_path() ) );
-				}
-			}
+			$view_path = $this->get_view_path();
+			$view_uri  = str_replace( get_stylesheet_directory(), get_stylesheet_directory_uri(), $view_path );
+			$this->load_modules( $this->configuration['modules']['gutenberg'], static function ( string $class ) use ( $view_path, $view_uri ) {
+				new $class( $view_path, $view_uri );
+			} );
 		}
 	}
 
@@ -294,11 +370,9 @@ abstract class Theme {
 	 */
 	protected function init_rest_routes(): void {
 		if ( ! empty( $this->configuration['modules']['rest'] ) ) {
-			foreach ( $this->configuration['modules']['rest'] as $rest ) {
-				if ( class_exists( $rest ) ) {
-					new $rest();
-				}
-			}
+			$this->load_modules( $this->configuration['modules']['rest'], static function ( string $class ) {
+				new $class();
+			} );
 		}
 	}
 
@@ -310,11 +384,9 @@ abstract class Theme {
 	 */
 	protected function init_cli(): void {
 		if ( defined( 'WP_CLI' ) && WP_CLI && ! empty( $this->configuration['modules']['cli'] ) ) {
-			foreach ( $this->configuration['modules']['cli'] as $cli ) {
-				if ( class_exists( $cli ) ) {
-					new $cli();
-				}
-			}
+			$this->load_modules( $this->configuration['modules']['cli'], static function ( string $class ) {
+				new $class();
+			} );
 		}
 	}
 
@@ -446,11 +518,9 @@ abstract class Theme {
 	 */
 	public function init_widgets(): void {
 		if ( ! empty( $this->configuration['modules']['widget'] ) ) {
-			foreach ( $this->configuration['modules']['widget'] as $widget ) {
-				if ( class_exists( $widget ) ) {
-					register_widget( $widget );
-				}
-			}
+			$this->load_modules( $this->configuration['modules']['widget'], static function ( string $class ) {
+				register_widget( $class );
+			} );
 		}
 	}
 
@@ -461,7 +531,7 @@ abstract class Theme {
 	 *   'sidebars' => [
 	 *       '#id' => [
 	 *           'id' => #id of the sidebar,
-	 *           'name' => #name of the sidebar
+	 *           'name' => #name of the sidebar, as a plain (untranslated) string -- translated here, not in the config file
 	 *       ]
 	 *   ]
 	 *  ]
@@ -522,17 +592,21 @@ abstract class Theme {
 	 * ]
 	 */
 	public function init_custom_posts_and_taxonomies(): void {
+		$this->register_post_types();
+		$this->register_taxonomies();
+	}
+
+	/**
+	 * Registers custom post types from posts.config.php, or applies built-in label
+	 * overrides for 'post'/'page'.
+	 *
+	 * @return void
+	 */
+	protected function register_post_types(): void {
 		$customPosts = array();
 		if ( array_key_exists( 'posts', $this->configuration ) ) {
 			$customPosts = $this->configuration['posts'];
 		}
-
-
-		$customTaxonomies = array();
-		if ( array_key_exists( 'taxonomies', $this->configuration ) ) {
-			$customTaxonomies = $this->configuration['taxonomies'];
-		}
-
 
 		foreach ( $customPosts as $id => $customPost ) {
 			if ( ! in_array( $id, [ 'post', 'page' ], true ) ) {
@@ -543,85 +617,122 @@ abstract class Theme {
 				} else {
 					register_post_type( $id, $customPost );
 					if ( ! empty( $customPost['capabilities'] ) ) {
-						$role = get_role( 'administrator' );
-						if ( ! empty( $role ) ) {
-							foreach ( $customPost['capabilities'] as $capability ) {
-								if ( ! $role->has_cap( $capability ) ) {
-									$role->add_cap( $capability );
-								}
-							}
-						}
+						$this->grant_capabilities( $customPost['capabilities'] );
 					}
 				}
 			} else {
-				global $wp_post_types;
-				$labels = &$wp_post_types[ $id ]->labels;
-				if ( isset( $customPost['labels']['name'] ) ) {
-					$labels->name = $customPost['labels']['name'];
-				}
-				if ( isset( $customPost['labels']['singular_name'] ) ) {
-					$labels->singular_name = $customPost['labels']['singular_name'];
-				}
-				if ( isset( $customPost['labels']['add_new'] ) ) {
-					$labels->add_new = $customPost['labels']['add_new'];
-				}
-				if ( isset( $customPost['labels']['add_new_item'] ) ) {
-					$labels->add_new_item = $customPost['labels']['add_new_item'];
-				}
-				if ( isset( $customPost['labels']['edit_item'] ) ) {
-					$labels->edit_item = $customPost['labels']['edit_item'];
-				}
-				if ( isset( $customPost['labels']['new_item'] ) ) {
-					$labels->new_item = $customPost['labels']['new_item'];
-				}
-				if ( isset( $customPost['labels']['view_item'] ) ) {
-					$labels->view_item = $customPost['labels']['view_item'];
-				}
-				if ( isset( $customPost['labels']['search_items'] ) ) {
-					$labels->search_items = $customPost['labels']['search_items'];
-				}
-				if ( isset( $customPost['labels']['not_found'] ) ) {
-					$labels->not_found = $customPost['labels']['not_found'];
-				}
-				if ( isset( $customPost['labels']['not_found_in_trash'] ) ) {
-					$labels->not_found_in_trash = $customPost['labels']['not_found_in_trash'];
-				}
-				if ( isset( $customPost['labels']['all_items'] ) ) {
-					$labels->all_items = $customPost['labels']['all_items'];
-				}
-				if ( isset( $customPost['labels']['menu_name'] ) ) {
-					$labels->menu_name = $customPost['labels']['menu_name'];
-				}
-				if ( isset( $customPost['labels']['name_admin_bar'] ) ) {
-					$labels->name_admin_bar = $customPost['labels']['name_admin_bar'];
-				}
+				$this->apply_builtin_post_labels( $id, $customPost );
 			}
+		}
+	}
+
+	/**
+	 * Grants a list of capabilities to the administrator role, skipping any it already has.
+	 *
+	 * @param array $capabilities Capability names.
+	 *
+	 * @return void
+	 */
+	protected function grant_capabilities( array $capabilities ): void {
+		$role = get_role( 'administrator' );
+		if ( empty( $role ) ) {
+			return;
+		}
+
+		foreach ( $capabilities as $capability ) {
+			if ( ! $role->has_cap( $capability ) ) {
+				$role->add_cap( $capability );
+			}
+		}
+	}
+
+	/**
+	 * Overrides labels on the built-in 'post'/'page' post type objects.
+	 *
+	 * @param string $id Post type name ('post' or 'page').
+	 * @param array $customPost Config entry with an optional 'labels' array.
+	 *
+	 * @return void
+	 */
+	protected function apply_builtin_post_labels( string $id, array $customPost ): void {
+		global $wp_post_types;
+		$labels = &$wp_post_types[ $id ]->labels;
+
+		$label_fields = [
+			'name',
+			'singular_name',
+			'add_new',
+			'add_new_item',
+			'edit_item',
+			'new_item',
+			'view_item',
+			'search_items',
+			'not_found',
+			'not_found_in_trash',
+			'all_items',
+			'menu_name',
+			'name_admin_bar',
+		];
+
+		foreach ( $label_fields as $field ) {
+			if ( isset( $customPost['labels'][ $field ] ) ) {
+				$labels->$field = $customPost['labels'][ $field ];
+			}
+		}
+	}
+
+	/**
+	 * Registers custom taxonomies from posts.config.php and seeds/prunes their terms.
+	 *
+	 * @return void
+	 */
+	protected function register_taxonomies(): void {
+		$customTaxonomies = array();
+		if ( array_key_exists( 'taxonomies', $this->configuration ) ) {
+			$customTaxonomies = $this->configuration['taxonomies'];
 		}
 
 		foreach ( $customTaxonomies as $id => $customTaxonomy ) {
 			register_taxonomy( $id, $customTaxonomy['post'], $customTaxonomy['options'] );
 			if ( ! empty( $customTaxonomy['terms'] ) ) {
-				// phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- get_option() returns the stored scalar as a string; a strict compare against a config int/float would always mismatch.
-				if ( empty( $customTaxonomy['version'] ) || ( $customTaxonomy['version'] != get_option( 'nt_tax_' . $id . '_version' ) ) ) {
-					foreach ( $customTaxonomy['terms'] as $term ) {
-						if ( ! term_exists( $term['slug'], $id ) ) {
-							wp_insert_term( $term['name'], $id, [ 'slug' => $term['slug'] ] );
-						}
-					}
-					$current_terms = new WP_Term_Query( [
-						'taxonomy'   => $id,
-						'hide_empty' => false,
-						'fields'     => 'id=>slug'
-					] );
-					foreach ( $current_terms->get_terms() as $tid => $ct ) {
-						if ( ! array_key_exists( $ct, $customTaxonomy['terms'] ) ) {
-							wp_delete_term( $tid, $id );
-						}
-					}
-					update_option( 'nt_tax_' . $id . '_version', $customTaxonomy['version'] );
-				}
+				$this->seed_taxonomy_terms( $id, $customTaxonomy );
 			}
 		}
+	}
+
+	/**
+	 * Seeds a taxonomy's terms from config and removes any no longer listed, when the
+	 * config's 'version' doesn't match the stored 'nt_tax_{$id}_version' option.
+	 *
+	 * @param string $id Taxonomy name.
+	 * @param array $customTaxonomy Config entry with 'version' and 'terms'.
+	 *
+	 * @return void
+	 */
+	protected function seed_taxonomy_terms( string $id, array $customTaxonomy ): void {
+		// phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual -- get_option() returns the stored scalar as a string; a strict compare against a config int/float would always mismatch.
+		if ( ! empty( $customTaxonomy['version'] ) && ( $customTaxonomy['version'] == get_option( 'nt_tax_' . $id . '_version' ) ) ) {
+			return;
+		}
+
+		foreach ( $customTaxonomy['terms'] as $term ) {
+			if ( ! term_exists( $term['slug'], $id ) ) {
+				wp_insert_term( $term['name'], $id, [ 'slug' => $term['slug'] ] );
+			}
+		}
+
+		$current_terms = new WP_Term_Query( [
+			'taxonomy'   => $id,
+			'hide_empty' => false,
+			'fields'     => 'id=>slug',
+		] );
+		foreach ( $current_terms->get_terms() as $tid => $ct ) {
+			if ( ! array_key_exists( $ct, $customTaxonomy['terms'] ) ) {
+				wp_delete_term( $tid, $id );
+			}
+		}
+
+		update_option( 'nt_tax_' . $id . '_version', $customTaxonomy['version'] );
 	}
 
 	/**
@@ -650,44 +761,39 @@ abstract class Theme {
 	 */
 	public function init_styles_and_scripts(): void {
 		if ( array_key_exists( 'assets', $this->configuration ) ) {
-			$js                                        = $this->configuration['assets']['js'];
-			$css                                       = $this->configuration['assets']['css'];
 			$this->configuration['assets']['versions'] = [];
-			foreach ( $css as $st ) {
-				$loading_dir = '';
-				if ( file_exists( get_stylesheet_directory() . $st['file'] ) ) {
-					$loading_dir = get_stylesheet_directory_uri();
-				} else if ( file_exists( get_template_directory() . $st['file'] ) ) {
-					$loading_dir = get_template_directory_uri();
-				}
-				if ( ! empty( $loading_dir ) ) {
-					if ( ! empty( $st['condition'] ) && is_callable( $st['condition'] ) ) {
-						if ( $st['condition']() ) {
-							$this->enqueue_script_or_style( $loading_dir, $st );
-						}
-					} else {
-						$this->enqueue_script_or_style( $loading_dir, $st );
-					}
-				}
+
+			foreach ( $this->configuration['assets']['css'] as $st ) {
+				$this->enqueue_configured_asset( $st, 'style' );
 			}
-			foreach ( $js as $sc ) {
-				$loading_dir = '';
-				if ( file_exists( get_stylesheet_directory() . $sc['file'] ) ) {
-					$loading_dir = get_stylesheet_directory_uri();
-				} else if ( file_exists( get_template_directory() . $sc['file'] ) ) {
-					$loading_dir = get_template_directory_uri();
-				}
-				if ( ! empty( $loading_dir ) ) {
-					if ( ! empty( $sc['condition'] ) && is_callable( $sc['condition'] ) ) {
-						if ( $sc['condition']() ) {
-							$this->enqueue_script_or_style( $loading_dir, $sc, 'script' );
-						}
-					} else {
-						$this->enqueue_script_or_style( $loading_dir, $sc, 'script' );
-					}
-				}
+			foreach ( $this->configuration['assets']['js'] as $sc ) {
+				$this->enqueue_configured_asset( $sc, 'script' );
 			}
 		}
+	}
+
+	/**
+	 * Resolves a configured asset's loading directory (child theme first) and enqueues it,
+	 * honouring its 'condition' callback when present. Shared by the css/js loops in
+	 * init_styles_and_scripts().
+	 *
+	 * @param array $file Asset definition from assets.config.php.
+	 * @param string $type One of: style, script.
+	 *
+	 * @return void
+	 */
+	protected function enqueue_configured_asset( array $file, string $type ): void {
+		$loading_dir = self::resolve_uri( $file['file'] );
+		if ( null === $loading_dir ) {
+			return;
+		}
+		$loading_dir = substr( $loading_dir, 0, - strlen( $file['file'] ) );
+
+		if ( ! empty( $file['condition'] ) && is_callable( $file['condition'] ) && ! $file['condition']() ) {
+			return;
+		}
+
+		$this->enqueue_script_or_style( $loading_dir, $file, $type );
 	}
 
 	/**

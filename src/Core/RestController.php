@@ -71,7 +71,7 @@ abstract class RestController {
 	 */
 	protected function build_route(mixed $callback, string $method = 'GET', mixed $permission = '__return_true', string $params = ''): void {
 		register_rest_route(
-			$this->namespace.'/v1',
+			$this->namespace . '/' . $this->version,
 			'/'.$this->base.'/'.$params,
 			array(
 				array(

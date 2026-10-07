@@ -10,7 +10,7 @@
 namespace Netivo\Core\Admin;
 
 use Exception;
-use ReflectionClass;
+use Netivo\Core\Traits\ResolvesViewName;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	header( 'HTTP/1.0 403 Forbidden' );
@@ -24,6 +24,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * It includes hooks and methods for working with WordPress taxonomy form fields and processing term meta data.
  */
 abstract class TermMeta {
+
+	use ResolvesViewName;
 
 	/**
 	 * Name of the metadata field.
@@ -59,23 +61,8 @@ abstract class TermMeta {
 	 * @param string $path Path to Admin folder.
 	 */
 	public function __construct( string $path ) {
-		$this->path = $path;
-
-		$obj  = new ReflectionClass( $this );
-		$data = $obj->getAttributes();
-		foreach ( $data as $attribute ) {
-			if ( $attribute->getName() === 'Netivo\Attributes\View' ) {
-				$this->view_name = $attribute->getArguments()[0];
-			}
-		}
-		if ( empty( $this->view_name ) ) {
-			$filename = $obj->getFileName();
-			$filename = str_replace( '.php', '', $filename );
-
-			$name = basename( $filename );
-
-			$this->view_name = strtolower( $name );
-		}
+		$this->path      = $path;
+		$this->view_name = $this->resolve_view_attribute( 'Netivo\Attributes\View' ) ?? $this->resolve_view_name_from_filename();
 
 		if ( ! is_array( $this->taxonomy ) ) {
 			$this->taxonomy = array( $this->taxonomy );

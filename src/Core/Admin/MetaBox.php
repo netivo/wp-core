@@ -10,7 +10,7 @@
 namespace Netivo\Core\Admin;
 
 use Exception;
-use ReflectionClass;
+use Netivo\Core\Traits\ResolvesViewName;
 use WP_Post;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -25,6 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Subclasses set the configuration properties, implement save() and provide a view file.
  */
 abstract class MetaBox {
+
+	use ResolvesViewName;
 
 	/**
 	 * Metadata fields supported by the application.
@@ -112,23 +114,8 @@ abstract class MetaBox {
 	 * @param string $path Path to Admin folder.
 	 */
 	public function __construct( string $path ) {
-		$this->path = $path;
-
-		$obj  = new ReflectionClass( $this );
-		$data = $obj->getAttributes();
-		foreach ( $data as $attribute ) {
-			if ( $attribute->getName() === 'Netivo\Attributes\View' ) {
-				$this->view_name = $attribute->getArguments()[0];
-			}
-		}
-		if ( empty( $this->view_name ) ) {
-			$filename = $obj->getFileName();
-			$filename = str_replace( '.php', '', $filename );
-
-			$name = basename( $filename );
-
-			$this->view_name = strtolower( $name );
-		}
+		$this->path      = $path;
+		$this->view_name = $this->resolve_view_attribute( 'Netivo\Attributes\View' ) ?? $this->resolve_view_name_from_filename();
 
 		if ( ! is_array( $this->screen ) ) {
 			$this->screen = array( $this->screen );
@@ -177,6 +164,10 @@ abstract class MetaBox {
 	 * Gets the front page ID for every configured language.
 	 * Uses Polylang or WPML when active, otherwise the page_on_front option.
 	 *
+	 * WPML is detected via the `wpml_active_languages` filter, the current API; the old
+	 * `icl_get_languages()` function is only used as a fallback for older WPML installs
+	 * that don't yet register that filter.
+	 *
 	 * @return array List of post IDs.
 	 */
 	protected function get_page_on_front(): array {
@@ -187,9 +178,12 @@ abstract class MetaBox {
 			foreach ( $languages as $lang ) {
 				$ret[] = pll_get_post( $pof, $lang['slug'] );
 			}
-		} elseif ( function_exists( 'icl_get_languages' ) ) {
-			$languages = icl_get_languages();
-			foreach ( $languages as $lang ) {
+		} elseif ( has_filter( 'wpml_active_languages' ) || function_exists( 'icl_get_languages' ) ) {
+			$languages = apply_filters( 'wpml_active_languages', null );
+			if ( empty( $languages ) && function_exists( 'icl_get_languages' ) ) {
+				$languages = icl_get_languages();
+			}
+			foreach ( (array) $languages as $lang ) {
 				$id = apply_filters( 'wpml_object_id', $pof, 'page', false, $lang['language_code'] );
 				// phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- the filter can return false for "not found"; loose compare intentionally treats that like null and skips it.
 				if ( $id != null ) {
