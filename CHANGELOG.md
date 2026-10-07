@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## Version 1.3.2
 
 - Config files, views, and Gutenberg block paths now resolve child theme first, falling back to the parent/template theme (`Theme::resolve_path()`/`Theme::resolve_uri()`)
 - Fixed `supports` config entries in `'key' => [args]` form being silently skipped (e.g. `'custom-logo' => [...]`); plain string entries still work as before
