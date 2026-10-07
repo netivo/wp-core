@@ -68,6 +68,31 @@ class PostTypeTest extends TestCase {
 		$this->expectException( \Exception::class );
 		new TestPostType();
 	}
+
+	public function test_auto_register_false_skips_registering_the_post_type(): void {
+		// Regression test for R9.
+		Functions\when( 'register_post_type' )->alias( function () {
+			throw new \RuntimeException( 'register_post_type() should not have been called.' );
+		} );
+
+		new TestPostType( false );
+		$this->addToAssertionCount( 1 );
+	}
+
+	public function test_register_can_be_called_explicitly_after_opting_out_of_auto_register(): void {
+		Functions\when( 'post_type_exists' )->justReturn( false );
+		Functions\when( 'get_role' )->justReturn( null );
+		$called = false;
+		Functions\when( 'register_post_type' )->alias( function () use ( &$called ) {
+			$called = true;
+		} );
+
+		$post_type = new TestPostType( false );
+		$this->assertFalse( $called );
+
+		$post_type->register();
+		$this->assertTrue( $called );
+	}
 }
 
 class TestPostType extends PostType {

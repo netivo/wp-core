@@ -247,35 +247,106 @@ class EntityManager {
 	}
 
 	/**
+	 * Operators allowed in a $where entry's 'operator' key. Anything else is rejected.
+	 */
+	protected const ALLOWED_WHERE_OPERATORS = [ '=', '!=', '<>', '<', '<=', '>', '>=', 'LIKE', 'NOT LIKE' ];
+
+	/**
+	 * wpdb::prepare() placeholders allowed in a $where entry's 'type' key. Anything else
+	 * is rejected.
+	 */
+	protected const ALLOWED_WHERE_TYPES = [ '%s', '%d', '%f' ];
+
+	/**
+	 * Directions allowed in an $order entry. Anything else is rejected.
+	 */
+	protected const ALLOWED_ORDER_DIRECTIONS = [ 'ASC', 'DESC' ];
+
+	/**
 	 * Builds a " WHERE ..." SQL fragment from a where-options array, or '' when none is given.
 	 * Shared by findAll() and count().
 	 *
+	 * Column names, operators and placeholder types are untrusted input as far as this
+	 * method is concerned (S5): a $key not in $table's annotated columns, an 'operator'
+	 * outside ALLOWED_WHERE_OPERATORS, or a 'type' outside ALLOWED_WHERE_TYPES causes that
+	 * condition to be skipped entirely, rather than concatenated into the query.
+	 *
+	 * @param Table $table Table annotation, used to whitelist column names.
 	 * @param array|null $where Where options, each value shaped like
 	 *                          ['type' => '%s', 'value' => ..., 'operator' => optional].
 	 *
 	 * @return string
 	 */
-	protected static function build_where( ?array $where ): string {
+	protected static function build_where( Table $table, ?array $where ): string {
 		global $wpdb;
 
 		if ( empty( $where ) ) {
 			return '';
 		}
 
-		$parts = [];
+		$columns = $table->get_columns();
+		$parts   = [];
 		foreach ( $where as $key => $value ) {
+			if ( ! array_key_exists( $key, $columns ) || ! in_array( $value['type'], self::ALLOWED_WHERE_TYPES, true ) ) {
+				continue;
+			}
+
 			if ( array_key_exists( 'operator', $value ) ) {
-				if ( $value['operator'] !== 'LIKE' ) {
+				if ( ! in_array( $value['operator'], self::ALLOWED_WHERE_OPERATORS, true ) ) {
+					continue;
+				}
+
+				if ( $value['operator'] !== 'LIKE' && $value['operator'] !== 'NOT LIKE' ) {
 					$parts[] = $wpdb->prepare( $key . ' ' . $value['operator'] . ' ' . $value['type'], $value['value'] );
 				} else {
-					$parts[] = $wpdb->prepare( $key . ' LIKE ' . $value['type'], '%' . $value['value'] . '%' );
+					$parts[] = $wpdb->prepare( $key . ' ' . $value['operator'] . ' ' . $value['type'], '%' . $wpdb->esc_like( $value['value'] ) . '%' );
 				}
 			} else {
 				$parts[] = $wpdb->prepare( $key . ' = ' . $value['type'], $value['value'] );
 			}
 		}
 
+		if ( empty( $parts ) ) {
+			return '';
+		}
+
 		return ' WHERE ' . implode( ' AND ', $parts );
+	}
+
+	/**
+	 * Builds an " ORDER BY ..." SQL fragment from an order array, or '' when none is given.
+	 *
+	 * Column names and directions are untrusted input as far as this method is concerned
+	 * (S5): a $key not in $table's annotated columns, or a direction outside
+	 * ALLOWED_ORDER_DIRECTIONS, causes that entry to be skipped entirely, rather than
+	 * concatenated into the query.
+	 *
+	 * @param Table $table Table annotation, used to whitelist column names.
+	 * @param array|null $order Map of column name to direction ('ASC'/'DESC').
+	 *
+	 * @return string
+	 */
+	protected static function build_order( Table $table, ?array $order ): string {
+		if ( empty( $order ) ) {
+			return '';
+		}
+
+		$columns = $table->get_columns();
+		$parts   = [];
+		foreach ( $order as $key => $direction ) {
+			$direction = strtoupper( (string) $direction );
+			if ( ! array_key_exists( $key, $columns ) || ! in_array( $direction, self::ALLOWED_ORDER_DIRECTIONS, true ) ) {
+				continue;
+			}
+
+			$parts[] = $key . ' ' . $direction;
+		}
+
+		if ( empty( $parts ) ) {
+			return '';
+		}
+
+		return ' ORDER BY ' . implode( ', ', $parts );
 	}
 
 	/**
@@ -296,20 +367,9 @@ class EntityManager {
 		if ( ! empty( $table ) ) {
 			$name = self::table_name( $table );
 
-			$sql = "SELECT * FROM {$name}" . self::build_where( $where );
+			$sql = "SELECT * FROM {$name}" . self::build_where( $table, $where );
 
-			$order_s = '';
-			if ( $order ) {
-				$order_s = ' ORDER BY ';
-				$i       = 0;
-				foreach ( $order as $key => $type ) {
-					$order_s .= $key . ' ' . $type;
-					if ( $i !== count( $order ) - 1 ) {
-						$order_s .= ', ';
-					}
-					$i ++;
-				}
-			}
+			$order_s = self::build_order( $table, $order );
 
 			$limit_s = '';
 			if ( $limit !== null ) {
@@ -359,7 +419,7 @@ class EntityManager {
 		if ( ! empty( $table ) ) {
 			$name = self::table_name( $table );
 
-			$sql = "SELECT COUNT(*) FROM {$name}" . self::build_where( $where );
+			$sql = "SELECT COUNT(*) FROM {$name}" . self::build_where( $table, $where );
 
 			return (int) $wpdb->get_var( $sql );
 		}

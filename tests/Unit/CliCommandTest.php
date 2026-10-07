@@ -83,6 +83,24 @@ class CliCommandTest extends TestCase {
 		$this->assertSame( 'add_command', \WP_CLI::$calls[0][0] );
 		$this->assertSame( 'netivo test', \WP_CLI::$calls[0][1][0] );
 	}
+
+	public function test_auto_register_false_skips_registering_the_command(): void {
+		// Regression test for R9.
+		Functions\when( 'did_action' )->alias( function () {
+			throw new \RuntimeException( 'did_action() should not have been called.' );
+		} );
+
+		new TestCliCommand( false );
+		$this->addToAssertionCount( 1 );
+	}
+
+	public function test_register_can_be_called_explicitly_after_opting_out_of_auto_register(): void {
+		$command = new TestCliCommand( false );
+		$this->assertSame( [], \WP_CLI::$calls );
+
+		$command->register();
+		$this->assertSame( 'add_command', \WP_CLI::$calls[0][0] );
+	}
 }
 
 class TestCliCommand extends CliCommand {

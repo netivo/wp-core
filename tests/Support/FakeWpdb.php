@@ -95,4 +95,8 @@ class FakeWpdb {
 	public function get_charset_collate(): string {
 		return 'DEFAULT CHARACTER SET utf8mb4';
 	}
+
+	public function esc_like( string $text ): string {
+		return addcslashes( $text, '_%\\' );
+	}
 }

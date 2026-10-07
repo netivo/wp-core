@@ -13,7 +13,7 @@ class PageTest extends TestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
-		Functions\stubs( [ 'sanitize_key', 'wp_unslash' ] );
+		Functions\stubs( [ 'sanitize_key', 'wp_unslash', 'esc_html' ] );
 		Functions\when( 'add_action' )->justReturn( true );
 	}
 
@@ -101,6 +101,77 @@ class PageTest extends TestCase {
 
 		$tab = $main->find_tab( 'tab-one' );
 		$this->assertTrue( $tab->save_was_delegated_to );
+	}
+
+	public function test_a_subclass_using_the_new_unprefixed_properties_works_the_same_way(): void {
+		// Forward-compatible path (R10): no `_`-prefixed overrides at all.
+		$main = new NewStylePage( '/views', [] );
+
+		$this->assertSame( 'new-style-page', $main->get_slug() );
+		$this->assertSame( 'admin.php?page=new-style-page', $main->get_redirect_url() );
+	}
+
+	public function test_an_old_style_subclass_triggers_a_deprecation_notice_per_overridden_property(): void {
+		// Regression test for R10: overriding a `_`-prefixed property still works (see the
+		// other tests using TestMainPage/TestTabPage throughout this file), but must now
+		// also warn, since it's deprecated.
+		$notices = [];
+		set_error_handler( function ( int $errno, string $message ) use ( &$notices ) {
+			$notices[] = $message;
+
+			return true;
+		}, E_USER_DEPRECATED );
+
+		try {
+			new TestTabPage( '/views', [] );
+		} finally {
+			restore_error_handler();
+		}
+
+		// TestTabPage overrides three deprecated properties: $_type, $_menu_slug, $_parent.
+		$this->assertCount( 3, $notices );
+		$combined = implode( ' | ', $notices );
+		$this->assertStringContainsString( 'rename it to $type', $combined );
+		$this->assertStringContainsString( 'rename it to $menu_slug', $combined );
+		$this->assertStringContainsString( 'rename it to $parent', $combined );
+	}
+
+	public function test_auto_register_false_skips_registering_any_hook(): void {
+		// Regression test for R9: constructing with $auto_register = false must not call
+		// add_action() at all.
+		Functions\when( 'add_action' )->alias( function () {
+			throw new \RuntimeException( 'add_action() should not have been called.' );
+		} );
+
+		new TestMainPage( '/views', [], false );
+		$this->addToAssertionCount( 1 );
+	}
+
+	public function test_register_can_be_called_explicitly_after_opting_out_of_auto_register(): void {
+		$calls = [];
+		Functions\when( 'add_action' )->alias( function ( string $hook ) use ( &$calls ) {
+			$calls[] = $hook;
+		} );
+
+		$main = new TestMainPage( '/views', [], false );
+		$this->assertSame( [], $calls );
+
+		$main->register();
+		$this->assertSame( [ 'admin_init', 'admin_menu' ], $calls );
+	}
+}
+
+class NewStylePage extends Page {
+	protected string $menu_slug = 'new-style-page';
+
+	public function do_action(): void {
+	}
+
+	public function save(): void {
+	}
+
+	public function get_redirect_url(): string {
+		return $this->redirect_url;
 	}
 }
 

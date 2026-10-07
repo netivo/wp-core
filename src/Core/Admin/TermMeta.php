@@ -59,8 +59,12 @@ abstract class TermMeta {
 	 * Term Meta box constructor.
 	 *
 	 * @param string $path Path to Admin folder.
+	 * @param bool $auto_register Whether to register WordPress hooks immediately. Pass
+	 *                             false to construct the instance without touching any
+	 *                             hook, then call register() explicitly when ready.
+	 *                             Defaults to true to match the previous behaviour.
 	 */
-	public function __construct( string $path ) {
+	public function __construct( string $path, bool $auto_register = true ) {
 		$this->path      = $path;
 		$this->view_name = $this->resolve_view_attribute( 'Netivo\Attributes\View' ) ?? $this->resolve_view_name_from_filename();
 
@@ -68,8 +72,17 @@ abstract class TermMeta {
 			$this->taxonomy = array( $this->taxonomy );
 		}
 
-		$this->init_actions();
+		if ( $auto_register ) {
+			$this->register();
+		}
+	}
 
+	/**
+	 * Registers this term meta box's WordPress hooks. Called automatically from the
+	 * constructor unless it was built with $auto_register = false.
+	 */
+	public function register(): void {
+		$this->init_actions();
 	}
 
 	/**

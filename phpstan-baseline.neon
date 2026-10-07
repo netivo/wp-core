@@ -19,6 +19,9 @@
 #   specific malformed-input check is dead code. Fixing it means touching the parser's
 #   control flow, which needs its own test coverage first rather than a drive-by change
 #   alongside unrelated tooling work.
+#
+# Regenerate with: composer analyse -- --generate-baseline=phpstan-baseline.neon
+# (this overwrites the file, including this comment block — restore it afterward).
 parameters:
 	ignoreErrors:
 		-
@@ -101,6 +104,18 @@ parameters:
 
 		-
 			message: '#^Property Netivo\\Core\\Admin\\Page\:\:\$_childrenObjects type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/Page.php
+
+		-
+			message: '#^Property Netivo\\Core\\Admin\\Page\:\:\$children type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/Page.php
+
+		-
+			message: '#^Property Netivo\\Core\\Admin\\Page\:\:\$children_objects type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/Core/Admin/Page.php
@@ -266,6 +281,12 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/Core/Database/Entity.php
+
+		-
+			message: '#^Method Netivo\\Core\\Database\\EntityManager\:\:build_order\(\) has parameter \$order with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Database/EntityManager.php
 
 		-
 			message: '#^Method Netivo\\Core\\Database\\EntityManager\:\:build_where\(\) has parameter \$where with no value type specified in iterable type array\.$#'

@@ -36,8 +36,23 @@ abstract class Gutenberg {
 
 	/**
 	 * Gutenberg constructor.
+	 *
+	 * @param bool $auto_register Whether to register WordPress hooks immediately. Pass
+	 *                             false to construct the instance without touching any
+	 *                             hook, then call register() explicitly when ready.
+	 *                             Defaults to true to match the previous behaviour.
 	 */
-	public function __construct() {
+	public function __construct( bool $auto_register = true ) {
+		if ( $auto_register ) {
+			$this->register();
+		}
+	}
+
+	/**
+	 * Registers this block's WordPress hooks. Called automatically from the constructor
+	 * unless it was built with $auto_register = false.
+	 */
+	public function register(): void {
 		add_action( 'init', [ $this, 'register_block' ] );
 	}
 

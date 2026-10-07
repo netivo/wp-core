@@ -22,10 +22,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 abstract class PostType {
 
 	/**
+	 * PostType constructor.
+	 *
+	 * @param bool $auto_register Whether to register the post type immediately. Pass
+	 *                             false to construct the instance without registering,
+	 *                             then call register() explicitly when ready. Defaults
+	 *                             to true to match the previous behaviour.
+	 *
 	 * @throws \Exception
 	 */
-	public function __construct() {
-		$this->register();
+	public function __construct( bool $auto_register = true ) {
+		if ( $auto_register ) {
+			$this->register();
+		}
 	}
 
 	/**
@@ -33,7 +42,7 @@ abstract class PostType {
 	 *
 	 * @throws \Exception
 	 */
-	protected function register(): void {
+	public function register(): void {
 		$options = $this->get_settings();
 		$id      = $this->get_id();
 		if ( ! empty( $id ) && ! empty( $options ) ) {

@@ -89,6 +89,44 @@ class TermMetaTest extends TestCase {
 		$this->assertSame( 43, $bar->do_save( 43 ) );
 		$this->assertTrue( $bar->saved );
 	}
+
+	public function test_auto_register_false_skips_registering_any_hook(): void {
+		// Regression test for R9.
+		Functions\when( 'add_action' )->alias( function () {
+			throw new \RuntimeException( 'add_action() should not have been called.' );
+		} );
+
+		new RegistrableTermMeta( '/views', false );
+		$this->addToAssertionCount( 1 );
+	}
+
+	public function test_register_can_be_called_explicitly_after_opting_out_of_auto_register(): void {
+		$calls = [];
+		Functions\when( 'add_action' )->alias( function ( string $hook ) use ( &$calls ) {
+			$calls[] = $hook;
+		} );
+
+		$term_meta = new RegistrableTermMeta( '/views', false );
+		$this->assertSame( [], $calls );
+
+		$term_meta->register();
+		$this->assertSame( [
+			'category_add_form_fields',
+			'category_edit_form_fields',
+			'edited_category',
+			'create_category',
+		], $calls );
+	}
+}
+
+class RegistrableTermMeta extends TermMeta {
+	public static string $META_FIELD_NAME = 'registrable';
+
+	protected array|string $taxonomy = 'category';
+
+	public function save( int $term_id, ?int $tt_id = null ): int {
+		return $term_id;
+	}
 }
 
 class FooTermMeta extends TermMeta {

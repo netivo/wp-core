@@ -29,12 +29,25 @@ class EntityManagerTest extends TestCase {
 	}
 
 	/**
-	 * Invokes EntityManager's protected static build_where() via reflection.
+	 * Invokes EntityManager's protected static build_where() via reflection, against
+	 * TestEntity's own table annotation.
 	 */
 	private function build_where( ?array $where ): string {
 		$method = new ReflectionMethod( EntityManager::class, 'build_where' );
+		$table  = Annotations::get_table_annotations( TestEntity::class );
 
-		return $method->invoke( null, $where );
+		return $method->invoke( null, $table, $where );
+	}
+
+	/**
+	 * Invokes EntityManager's protected static build_order() via reflection, against
+	 * TestEntity's own table annotation.
+	 */
+	private function build_order( ?array $order ): string {
+		$method = new ReflectionMethod( EntityManager::class, 'build_order' );
+		$table  = Annotations::get_table_annotations( TestEntity::class );
+
+		return $method->invoke( null, $table, $order );
 	}
 
 	public function test_build_where_returns_empty_string_for_no_conditions(): void {
@@ -67,6 +80,53 @@ class EntityManagerTest extends TestCase {
 		] );
 
 		$this->assertSame( " WHERE title = 'foo' AND sort_order = 1", $sql );
+	}
+
+	public function test_build_where_rejects_a_column_name_not_on_the_entity(): void {
+		// Regression test for S5: a $where key must be one of the entity's own columns.
+		$sql = $this->build_where( [ 'id = 1; DROP TABLE wp_users; --' => [ 'type' => '%s', 'value' => 'x' ] ] );
+
+		$this->assertSame( '', $sql );
+	}
+
+	public function test_build_where_rejects_an_operator_outside_the_allow_list(): void {
+		$sql = $this->build_where( [ 'title' => [ 'type' => '%s', 'value' => 'x', 'operator' => '; DROP TABLE wp_users; --' ] ] );
+
+		$this->assertSame( '', $sql );
+	}
+
+	public function test_build_where_rejects_a_placeholder_type_outside_the_allow_list(): void {
+		$sql = $this->build_where( [ 'title' => [ 'type' => '%i', 'value' => 'x' ] ] );
+
+		$this->assertSame( '', $sql );
+	}
+
+	public function test_build_where_drops_only_the_rejected_condition_keeping_valid_ones(): void {
+		$sql = $this->build_where( [
+			'not_a_real_column' => [ 'type' => '%s', 'value' => 'x' ],
+			'title'              => [ 'type' => '%s', 'value' => 'foo' ],
+		] );
+
+		$this->assertSame( " WHERE title = 'foo'", $sql );
+	}
+
+	public function test_build_order_rejects_a_column_name_not_on_the_entity(): void {
+		// Regression test for S5: an $order key must be one of the entity's own columns.
+		$sql = $this->build_order( [ 'id; DROP TABLE wp_users; --' => 'ASC' ] );
+
+		$this->assertSame( '', $sql );
+	}
+
+	public function test_build_order_rejects_a_direction_outside_the_allow_list(): void {
+		$sql = $this->build_order( [ 'title' => 'ASC; DROP TABLE wp_users; --' ] );
+
+		$this->assertSame( '', $sql );
+	}
+
+	public function test_build_order_accepts_a_valid_column_and_direction(): void {
+		$sql = $this->build_order( [ 'title' => 'desc', 'sort_order' => 'ASC' ] );
+
+		$this->assertSame( ' ORDER BY title DESC, sort_order ASC', $sql );
 	}
 
 	public function test_insert_keeps_a_falsy_but_explicitly_set_value(): void {

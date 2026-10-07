@@ -159,7 +159,7 @@ class Products extends RestController {
 ```
 
 - `build_route( $callback, $method, $permission, $params )`. The default permission is `__return_true` (public). Pass a permission callback for anything that changes data or exposes private data.
-- Routes are always under `netivo/v1`, whatever `$version` says.
+- Routes are registered under `{$namespace}/{$version}` (defaults: `netivo`/`v1`); override `$version` in the subclass to version a route.
 
 Register it in `modules.rest`.
 
@@ -184,6 +184,18 @@ class Hero extends Gutenberg {
 - Set `$callback` to a method for server-rendered output. Leave it `null` for static blocks that render from `block.json`.
 - The class file is `Hero.php`, so the directory is `src/views/gutenberg/hero/`.
 - Register the class in `modules.gutenberg` for the front end, and in `modules.admin.gutenberg` to load the editor assets (the admin panel passes `include_path` and `uri`).
+- `block.json` must declare `"apiVersion": 3`. WordPress 7.0 iframes the block editor's
+  canvas once every registered block uses `apiVersion: 3`, and WordPress 7.1 iframes it
+  unconditionally regardless — but a block still on an older `apiVersion` behaves
+  inconsistently inside an iframed editor on 7.0, so there's no reason to stay on it.
+- Once the editor canvas is iframed (always, on WP 7.1+), assets enqueued via
+  `admin_enqueue_scripts` — including anything added through `Admin\Panel::custom_header()`
+  — never reach inside that iframe. If a block (or anything else) needs CSS/JS running
+  *inside* the editor canvas itself, add it via `Admin\Panel::custom_block_editor_assets()`
+  instead — see [admin.md](admin.md#gutenberg-in-the-editor).
+- Existing meta boxes still render outside the iframe, but any of their JS that reaches
+  *into* the editor canvas (e.g. manipulating block content via selectors into the canvas
+  iframe) needs re-testing under WP 7.1 — that JS is no longer in the same document.
 
 ## Widgets
 

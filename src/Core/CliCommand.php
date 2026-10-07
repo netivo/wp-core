@@ -62,8 +62,17 @@ abstract class CliCommand {
 	/**
 	 * CliCommand constructor.
 	 * Registers the command now if WP-CLI has already initialised, otherwise on cli_init.
+	 *
+	 * @param bool $auto_register Whether to register immediately/on cli_init. Pass false
+	 *                             to construct the instance without touching any hook,
+	 *                             then call register() explicitly when ready. Defaults
+	 *                             to true to match the previous behaviour.
 	 */
-	public function __construct() {
+	public function __construct( bool $auto_register = true ) {
+		if ( ! $auto_register ) {
+			return;
+		}
+
 		if ( did_action( 'cli_init' ) ) {
 			$this->register();
 		} else {

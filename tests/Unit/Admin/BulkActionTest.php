@@ -3,6 +3,7 @@ declare( strict_types=1 );
 
 namespace Netivo\Core\Tests\Unit\Admin;
 
+use Brain\Monkey\Functions;
 use Netivo\Core\Admin\BulkAction;
 use Netivo\Core\Tests\TestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -59,6 +60,29 @@ class BulkActionTest extends TestCase {
 		$result = $action->handle( 'https://example.test/redirect', 'nt_test_mark', [ '1' ] );
 
 		$this->assertSame( 'https://example.test/redirect?marked=1', $result );
+	}
+
+	public function test_auto_register_false_skips_registering_any_hook(): void {
+		// Regression test for R9.
+		Functions\when( 'add_filter' )->alias( function () {
+			throw new \RuntimeException( 'add_filter() should not have been called.' );
+		} );
+
+		new TestBulkAction( false );
+		$this->addToAssertionCount( 1 );
+	}
+
+	public function test_register_can_be_called_explicitly_after_opting_out_of_auto_register(): void {
+		$calls = [];
+		Functions\when( 'add_filter' )->alias( function ( string $hook ) use ( &$calls ) {
+			$calls[] = $hook;
+		} );
+
+		$action = new TestBulkAction( false );
+		$this->assertSame( [], $calls );
+
+		$action->register();
+		$this->assertSame( [ 'bulk_actions-edit-post', 'handle_bulk_actions-edit-post' ], $calls );
 	}
 }
 

@@ -35,6 +35,29 @@ class EndpointTest extends TestCase {
 
 		$this->addToAssertionCount( 1 );
 	}
+
+	public function test_auto_register_false_skips_registering_any_hook(): void {
+		// Regression test for R9.
+		Functions\when( 'add_action' )->alias( function () {
+			throw new \RuntimeException( 'add_action() should not have been called.' );
+		} );
+
+		new TestTemplateEndpoint( false );
+		$this->addToAssertionCount( 1 );
+	}
+
+	public function test_register_can_be_called_explicitly_after_opting_out_of_auto_register(): void {
+		$calls = [];
+		Functions\when( 'add_action' )->alias( function ( string $hook ) use ( &$calls ) {
+			$calls[] = $hook;
+		} );
+
+		$endpoint = new TestTemplateEndpoint( false );
+		$this->assertSame( [], $calls );
+
+		$endpoint->register();
+		$this->assertSame( [ 'init', 'template_redirect' ], $calls );
+	}
 }
 
 class TestTemplateEndpoint extends Endpoint {

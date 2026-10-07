@@ -56,6 +56,29 @@ class GutenbergTest extends TestCase {
 		$this->assertArrayHasKey( 'render_callback', $captured );
 		$this->assertSame( [ $block, 'render' ], $captured['render_callback'] );
 	}
+
+	public function test_auto_register_false_skips_registering_any_hook(): void {
+		// Regression test for R9.
+		Functions\when( 'add_action' )->alias( function () {
+			throw new \RuntimeException( 'add_action() should not have been called.' );
+		} );
+
+		new AttributedBlock( false );
+		$this->addToAssertionCount( 1 );
+	}
+
+	public function test_register_can_be_called_explicitly_after_opting_out_of_auto_register(): void {
+		$calls = [];
+		Functions\when( 'add_action' )->alias( function ( string $hook ) use ( &$calls ) {
+			$calls[] = $hook;
+		} );
+
+		$block = new AttributedBlock( false );
+		$this->assertSame( [], $calls );
+
+		$block->register();
+		$this->assertSame( [ 'init' ], $calls );
+	}
 }
 
 #[\Netivo\Attributes\Block( 'blocks/my-block' )]
