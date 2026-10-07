@@ -5,3 +5,5 @@
 .playwright-mcp
 .playwright-tests
 vendor
+.phpunit.result.cache
+.phpunit.cache

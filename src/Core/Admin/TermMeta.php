@@ -37,7 +37,7 @@ abstract class TermMeta {
 	/**
 	 * Taxonomies to add meta fields to.
 	 *
-	 * @var mixed
+	 * @var array|string
 	 */
 	protected array|string $taxonomy;
 

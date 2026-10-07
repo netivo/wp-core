@@ -1,0 +1,382 @@
+# Baseline for introducing PHPStan at level 6 on an existing codebase.
+#
+# Three accepted categories, none of which are real bugs:
+# - missingType.iterableValue: every `array`-typed param/property/return would need a
+#   generic shape annotation (e.g. array<string, mixed>) to satisfy level 6's strictness.
+#   Real, mechanical work with low bug-finding value here; left for a future pass rather
+#   than rushed through now.
+# - class.notFound (WP_CLI) / function.notFound (pll_the_languages, pll_get_post): WP-CLI
+#   and Polylang are optional runtime dependencies the WordPress stubs don't cover; both are
+#   already guarded with `class_exists()`/`function_exists()` checks at their call sites.
+# - return.void: MetaBox::do_save()/TermMeta::do_save() are hooked as actions (whose return
+#   value WordPress ignores) but deliberately return a value for direct, non-hook callers —
+#   see their own abstract save() contracts. Not a bug.
+#
+# One exception, NOT a false positive, intentionally left rather than fixed now:
+# - booleanAnd.alwaysFalse / identical.alwaysFalse in Annotations.php's hand-rolled parser
+#   state machine (~line 150): PHPStan is correct that `$composing === true` can't be true
+#   at that point given the surrounding `elseif ( ! $composing && ... )` guard, so that
+#   specific malformed-input check is dead code. Fixing it means touching the parser's
+#   control flow, which needs its own test coverage first rather than a drive-by change
+#   alongside unrelated tooling work.
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Method Netivo\\Core\\Admin\\BulkAction\:\:add_action\(\) has parameter \$actions with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/BulkAction.php
+
+		-
+			message: '#^Method Netivo\\Core\\Admin\\BulkAction\:\:add_action\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/BulkAction.php
+
+		-
+			message: '#^Method Netivo\\Core\\Admin\\BulkAction\:\:do_action\(\) has parameter \$ids with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/BulkAction.php
+
+		-
+			message: '#^Method Netivo\\Core\\Admin\\BulkAction\:\:handle\(\) has parameter \$ids with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/BulkAction.php
+
+		-
+			message: '#^Action callback returns mixed but should not return anything\.$#'
+			identifier: return.void
+			count: 1
+			path: src/Core/Admin/MetaBox.php
+
+		-
+			message: '#^Function pll_get_post not found\.$#'
+			identifier: function.notFound
+			count: 1
+			path: src/Core/Admin/MetaBox.php
+
+		-
+			message: '#^Function pll_the_languages not found\.$#'
+			identifier: function.notFound
+			count: 1
+			path: src/Core/Admin/MetaBox.php
+
+		-
+			message: '#^Method Netivo\\Core\\Admin\\MetaBox\:\:get_page_on_front\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/MetaBox.php
+
+		-
+			message: '#^Property Netivo\\Core\\Admin\\MetaBox\:\:\$META_FIELDS type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/MetaBox.php
+
+		-
+			message: '#^Property Netivo\\Core\\Admin\\MetaBox\:\:\$screen type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/MetaBox.php
+
+		-
+			message: '#^Property Netivo\\Core\\Admin\\MetaBox\:\:\$template type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/MetaBox.php
+
+		-
+			message: '#^Method Netivo\\Core\\Admin\\Page\:\:__construct\(\) has parameter \$children with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/Page.php
+
+		-
+			message: '#^Property Netivo\\Core\\Admin\\Page\:\:\$_children type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/Page.php
+
+		-
+			message: '#^Property Netivo\\Core\\Admin\\Page\:\:\$_childrenObjects type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/Page.php
+
+		-
+			message: '#^Method Netivo\\Core\\Admin\\Panel\:\:load_modules\(\) has parameter \$classes with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/Panel.php
+
+		-
+			message: '#^Property Netivo\\Core\\Admin\\Panel\:\:\$modules type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/Panel.php
+
+		-
+			message: '#^Action callback returns int but should not return anything\.$#'
+			identifier: return.void
+			count: 2
+			path: src/Core/Admin/TermMeta.php
+
+		-
+			message: '#^Property Netivo\\Core\\Admin\\TermMeta\:\:\$taxonomy type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/TermMeta.php
+
+		-
+			message: '#^Method Netivo\\Core\\Admin\\View\:\:__call\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/View.php
+
+		-
+			message: '#^Property Netivo\\Core\\Admin\\View\:\:\$_variables type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Admin/View.php
+
+		-
+			message: '#^Method Netivo\\Core\\Annotations\:\:cast_value\(\) has parameter \$val with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Annotations.php
+
+		-
+			message: '#^Method Netivo\\Core\\Annotations\:\:get_class_annotations\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Annotations.php
+
+		-
+			message: '#^Method Netivo\\Core\\Annotations\:\:get_method_annotations\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Annotations.php
+
+		-
+			message: '#^Method Netivo\\Core\\Annotations\:\:get_property_annotations\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Annotations.php
+
+		-
+			message: '#^Method Netivo\\Core\\Annotations\:\:parse_annotations\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Annotations.php
+
+		-
+			message: '#^Method Netivo\\Core\\Annotations\:\:parse_args\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Annotations.php
+
+		-
+			message: '#^Property Netivo\\Core\\Annotations\:\:\$annotationCache type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Annotations.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 2
+			path: src/Core/Annotations.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between false and true will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: src/Core/Annotations.php
+
+		-
+			message: '#^Call to static method error\(\) on an unknown class WP_CLI\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Core/CliCommand.php
+
+		-
+			message: '#^Call to static method log\(\) on an unknown class WP_CLI\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Core/CliCommand.php
+
+		-
+			message: '#^Call to static method success\(\) on an unknown class WP_CLI\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Core/CliCommand.php
+
+		-
+			message: '#^Call to static method warning\(\) on an unknown class WP_CLI\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/Core/CliCommand.php
+
+		-
+			message: '#^Method Netivo\\Core\\CliCommand\:\:execute\(\) has parameter \$args with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/CliCommand.php
+
+		-
+			message: '#^Method Netivo\\Core\\CliCommand\:\:execute\(\) has parameter \$assoc_args with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/CliCommand.php
+
+		-
+			message: '#^Method Netivo\\Core\\CliCommand\:\:get_synopsis\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/CliCommand.php
+
+		-
+			message: '#^Method Netivo\\Core\\CliCommand\:\:handle\(\) has parameter \$args with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/CliCommand.php
+
+		-
+			message: '#^Method Netivo\\Core\\CliCommand\:\:handle\(\) has parameter \$assoc_args with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/CliCommand.php
+
+		-
+			message: '#^Property Netivo\\Core\\CliCommand\:\:\$synopsis type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/CliCommand.php
+
+		-
+			message: '#^Property Netivo\\Core\\Database\\Annotations\:\:\$table_cache type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Database/Annotations.php
+
+		-
+			message: '#^Method Netivo\\Core\\Database\\Entity\:\:from_array\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Database/Entity.php
+
+		-
+			message: '#^Method Netivo\\Core\\Database\\EntityManager\:\:build_where\(\) has parameter \$where with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Database/EntityManager.php
+
+		-
+			message: '#^Method Netivo\\Core\\Database\\EntityManager\:\:count\(\) has parameter \$where with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Database/EntityManager.php
+
+		-
+			message: '#^Method Netivo\\Core\\Database\\EntityManager\:\:findAll\(\) has parameter \$order with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Database/EntityManager.php
+
+		-
+			message: '#^Method Netivo\\Core\\Database\\EntityManager\:\:findAll\(\) has parameter \$where with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Database/EntityManager.php
+
+		-
+			message: '#^Method Netivo\\Core\\Database\\EntityManager\:\:findAll\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Database/EntityManager.php
+
+		-
+			message: '#^Method Netivo\\Core\\PostType\:\:get_settings\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/PostType.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:apply_builtin_post_labels\(\) has parameter \$customPost with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:enqueue_configured_asset\(\) has parameter \$file with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:enqueue_script_or_style\(\) has parameter \$file with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:get_configuration\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:grant_capabilities\(\) has parameter \$capabilities with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:load_modules\(\) has parameter \$classes with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:remove_pingback_header\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:remove_pingback_header\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:restrict_users_endpoints\(\) has parameter \$endpoints with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:restrict_users_endpoints\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Method Netivo\\Core\\Theme\:\:seed_taxonomy_terms\(\) has parameter \$customTaxonomy with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Property Netivo\\Core\\Theme\:\:\$configuration type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php
+
+		-
+			message: '#^Property Netivo\\Core\\Theme\:\:\$instances type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Core/Theme.php

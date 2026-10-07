@@ -61,9 +61,10 @@ class Annotations {
 			$numMatches = count( $matches[0] );
 
 			for ( $i = 0; $i < $numMatches; ++ $i ) {
+				$name = $matches['name'][ $i ];
+
 				if ( isset( $matches['args'][ $i ] ) ) {
 					$argsParts = trim( $matches['args'][ $i ] );
-					$name      = $matches['name'][ $i ];
 					$value     = self::parse_args( $argsParts );
 				} else {
 					$value = array();
@@ -214,12 +215,12 @@ class Annotations {
 	/**
 	 * Try determinate the original type variable of a string
 	 *
-	 * @param string $val string containing possibles variables that can be cast to bool or int.
+	 * @param string|array $val string (or, for a composite `{...}` value, array) to cast.
 	 * @param boolean $trim indicate if the value passed should be trimmed after to try cast.
 	 *
 	 * @return mixed         returns the value converted to original type if was possible
 	 */
-	protected static function cast_value( string $val, bool $trim = false ) {
+	protected static function cast_value( string|array $val, bool $trim = false ) {
 		if ( is_array( $val ) ) {
 			foreach ( $val as $key => $value ) {
 				$val[ $key ] = self::cast_value( $value );

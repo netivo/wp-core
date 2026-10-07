@@ -25,10 +25,19 @@
       "Netivo\\Core\\": "src/Core"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Netivo\\Core\\Tests\\": "tests"
+    }
+  },
   "require-dev": {
     "automattic/vipwpcs": "^3.1",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.2",
-    "phpcompatibility/php-compatibility": "10.0.0-alpha2"
+    "phpcompatibility/php-compatibility": "10.0.0-alpha2",
+    "phpunit/phpunit": "^11.5",
+    "brain/monkey": "^2.6",
+    "phpstan/phpstan": "^2.0",
+    "szepeviktor/phpstan-wordpress": "^2.0"
   },
   "config": {
     "allow-plugins": {
@@ -37,6 +46,8 @@
   },
   "scripts": {
     "lint": "phpcs --standard=phpcs.xml.dist -d memory_limit=1024M --runtime-set timeout 300",
-    "lint:fix": "phpcbf --standard=phpcs.xml.dist -d memory_limit=1024M --runtime-set timeout 300"
+    "lint:fix": "phpcbf --standard=phpcs.xml.dist -d memory_limit=1024M --runtime-set timeout 300",
+    "test": "phpunit --colors=always",
+    "analyse": "phpstan analyse --memory-limit=512M"
   }
 }

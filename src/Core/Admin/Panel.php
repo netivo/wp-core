@@ -51,8 +51,10 @@ abstract class Panel {
 
 	/**
 	 * Panel constructor.
+	 *
+	 * @param Theme $parent Parent theme instance.
 	 */
-	public function __construct( $parent ) {
+	public function __construct( Theme $parent ) {
 		$this->parent_class = $parent;
 		$this->set_vars();
 
@@ -175,8 +177,10 @@ abstract class Panel {
 
 	/**
 	 * Initializes scripts and styles loaded in admin page.
+	 *
+	 * @param string $page Current admin page hook suffix.
 	 */
-	public function init_header( $page ): void {
+	public function init_header( string $page ): void {
 		wp_enqueue_script( 'jquery' );
 		wp_enqueue_script( 'thickbox' );
 		wp_enqueue_style( 'thickbox' );
@@ -198,5 +202,5 @@ abstract class Panel {
 	 *
 	 * @return void
 	 */
-	protected abstract function custom_header( $page ): void;
+	protected abstract function custom_header( string $page ): void;
 }

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Added a PHPUnit + Brain Monkey test suite (`composer test`) covering `Annotations` parsing, `Database\Annotations`, `EntityManager`'s SQL generation (`build_where()`, `insert()`/`update()`, table creation DDL) and `Theme`'s config merge/child-theme resolution
+- Added PHPStan at level 6 (`composer analyse`), using `szepeviktor/phpstan-wordpress` for WordPress stubs, with a baseline (`phpstan-baseline.neon`) covering accepted non-issues (missing array-shape generics, the optional WP-CLI/Polylang integrations, and action callbacks that intentionally return a value for direct callers)
+- Fixed a latent `TypeError` in `Annotations::cast_value()`: its parameter was typed `string` but composite `{...}` annotation values are arrays, so any annotation using that syntax would fatal
+- Fixed `Annotations::parse_annotations()` reusing a stale (or undefined, on the first match) `$name` from a previous loop iteration when a match's `args` group wasn't set
+- Removed redundant `is_array()`/`is_int()` checks in `EntityManager` now that `findAll()`'s parameters are properly nullable-typed
+- Added missing type hints to `Admin\Panel::__construct()` and `Admin\Panel::init_header()`/`custom_header()`
+- Fixed `Admin\TermMeta::$taxonomy`'s `@var` tag to match its native `array|string` type
+- Documented `Admin\View`'s magic `$title`/`$tab` properties with `@property` tags
+
 ## Version 1.3.2
 
 - Config files, views, and Gutenberg block paths now resolve child theme first, falling back to the parent/template theme (`Theme::resolve_path()`/`Theme::resolve_uri()`)

@@ -61,7 +61,7 @@ class EntityManager {
 	 *
 	 * @throws \ReflectionException When error.
 	 */
-	public static function __callStatic( string $name, mixed $arguments ) {
+	public static function __callStatic( string $name, mixed $arguments ): void {
 		if ( str_starts_with( $name, 'create_table_' ) ) {
 			$class_name = str_replace( 'create_table_', '', $name );
 			$class_name = str_replace( '_', '\\', $class_name );
@@ -299,7 +299,7 @@ class EntityManager {
 			$sql = "SELECT * FROM {$name}" . self::build_where( $where );
 
 			$order_s = '';
-			if ( $order && is_array( $order ) ) {
+			if ( $order ) {
 				$order_s = ' ORDER BY ';
 				$i       = 0;
 				foreach ( $order as $key => $type ) {
@@ -312,8 +312,8 @@ class EntityManager {
 			}
 
 			$limit_s = '';
-			if ( $limit !== null && is_int( $limit ) ) {
-				if ( $page !== null && is_int( $page ) ) {
+			if ( $limit !== null ) {
+				if ( $page !== null ) {
 					$offset  = ( ( $page - 1 ) * $limit );
 					$limit_s = ' LIMIT ' . $offset . ', ' . $limit;
 				} else {
