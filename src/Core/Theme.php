@@ -402,7 +402,7 @@ abstract class Theme {
 		$src_without_version = remove_query_arg( 'ver', $src );
 
 		if ( ! empty( $this->configuration['assets']['versions'] ) ) {
-			if ( in_array( $src_without_version, $this->configuration['assets']['versions'] ) ) {
+			if ( in_array( $src_without_version, $this->configuration['assets']['versions'], true ) ) {
 				return $src;
 			}
 		}
@@ -535,7 +535,7 @@ abstract class Theme {
 
 
 		foreach ( $customPosts as $id => $customPost ) {
-			if ( ! in_array( $id, [ 'post', 'page' ] ) ) {
+			if ( ! in_array( $id, [ 'post', 'page' ], true ) ) {
 				if ( is_string( $customPost ) ) {
 					if ( class_exists( $customPost ) ) {
 						new $customPost();
@@ -544,8 +544,12 @@ abstract class Theme {
 					register_post_type( $id, $customPost );
 					if ( ! empty( $customPost['capabilities'] ) ) {
 						$role = get_role( 'administrator' );
-						foreach ( $customPost['capabilities'] as $capability ) {
-							$role->add_cap( $capability );
+						if ( ! empty( $role ) ) {
+							foreach ( $customPost['capabilities'] as $capability ) {
+								if ( ! $role->has_cap( $capability ) ) {
+									$role->add_cap( $capability );
+								}
+							}
 						}
 					}
 				}
@@ -597,6 +601,7 @@ abstract class Theme {
 		foreach ( $customTaxonomies as $id => $customTaxonomy ) {
 			register_taxonomy( $id, $customTaxonomy['post'], $customTaxonomy['options'] );
 			if ( ! empty( $customTaxonomy['terms'] ) ) {
+				// phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- get_option() returns the stored scalar as a string; a strict compare against a config int/float would always mismatch.
 				if ( empty( $customTaxonomy['version'] ) || ( $customTaxonomy['version'] != get_option( 'nt_tax_' . $id . '_version' ) ) ) {
 					foreach ( $customTaxonomy['terms'] as $term ) {
 						if ( ! term_exists( $term['slug'], $id ) ) {
@@ -695,13 +700,13 @@ abstract class Theme {
 	 * @return void
 	 */
 	protected function enqueue_script_or_style( string $load_dir, array $file, string $type = 'style' ): void {
-		if ( $type == 'style' ) {
+		if ( $type === 'style' ) {
 			$function = 'wp_enqueue_style';
 			if ( ! empty( $file['register'] ) ) {
 				$function = 'wp_register_style';
 			}
-			wp_enqueue_style( $file['name'], $load_dir . $file['file'],
-				( ( ! empty( $file['dependencies'] ) ) ? $file['dependencies'] : null ),
+			$function( $file['name'], $load_dir . $file['file'],
+				( ( ! empty( $file['dependencies'] ) ) ? $file['dependencies'] : [] ),
 				( ( ! empty( $file['version'] ) ) ? $file['version'] : null ),
 				( ( ! empty( $file['media'] ) ) ? $file['media'] : 'all' )
 			);
@@ -710,8 +715,8 @@ abstract class Theme {
 			if ( ! empty( $file['register'] ) ) {
 				$function = 'wp_register_script';
 			}
-			wp_enqueue_script( $file['name'], $load_dir . $file['file'],
-				( ( ! empty( $file['dependencies'] ) ) ? $file['dependencies'] : null ),
+			$function( $file['name'], $load_dir . $file['file'],
+				( ( ! empty( $file['dependencies'] ) ) ? $file['dependencies'] : [] ),
 				( ( ! empty( $file['version'] ) ) ? $file['version'] : null ),
 				[
 					'in_footer' => true,

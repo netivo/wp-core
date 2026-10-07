@@ -11,6 +11,7 @@
 namespace Netivo\Core\Database;
 
 use Netivo\Core\Database\Annotations;
+use Netivo\Core\Database\Annotations\Table;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	header( 'HTTP/1.0 403 Forbidden' );
@@ -74,20 +75,21 @@ class EntityManager {
 
 				$v = get_option( '_nt_db_version', array() );
 
+				// phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- version is read back from a serialized option array; types are preserved, but kept loose defensively.
 				if ( ! array_key_exists( $table->get_name(), $v ) || ( $table->get_version() != $v[ $table->get_name() ] ) ) {
 
 					$fld = [];
-					foreach ( $table->get_columns() as $key => $column ) {
+					foreach ( $table->get_columns() as $column ) {
 						$tmp = "{$column->get_name()} {$column->get_type()}";
 						if ( $column->is_primary() ) {
-							$tmp .= "unsigned NOT NULL auto_increment PRIMARY KEY";
+							$tmp .= " unsigned NOT NULL auto_increment PRIMARY KEY";
 						} else {
 							if ( $column->is_required() ) {
 								$tmp .= " NOT NULL";
 							} else {
 								$tmp .= " NULL";
 							}
-							if ( ! empty( $column->get_default() ) ) {
+							if ( null !== $column->get_default() ) {
 								$tmp .= " DEFAULT '{$column->get_default()}'";
 							}
 						}
@@ -110,6 +112,19 @@ class EntityManager {
 	}
 
 	/**
+	 * Gets the prefixed table name for a table annotation, without relying on a dynamic $wpdb property.
+	 *
+	 * @param Table $table Table annotation.
+	 *
+	 * @return string
+	 */
+	protected static function table_name( Table $table ): string {
+		global $wpdb;
+
+		return $wpdb->prefix . $table->get_name();
+	}
+
+	/**
 	 * Saves the entity.
 	 *
 	 * @param mixed $entity Entity to save.
@@ -117,9 +132,9 @@ class EntityManager {
 	 * @return mixed
 	 */
 	public static function save( mixed $entity ): mixed {
-		if ( $entity->get_state() == 'new' ) {
+		if ( $entity->get_state() === 'new' ) {
 			return self::insert( $entity );
-		} elseif ( $entity->get_state() == 'changed' ) {
+		} elseif ( $entity->get_state() === 'changed' ) {
 			return self::update( $entity );
 		}
 
@@ -134,14 +149,13 @@ class EntityManager {
 	 * @return null|object
 	 */
 	public static function delete( mixed $entity ): ?object {
-		if ( $entity->get_state() == 'new' ) {
+		if ( $entity->get_state() === 'new' ) {
 			return $entity;
 		}
 		global $wpdb;
 		$table = $entity->get_table_data();
 		if ( ! empty( $table ) ) {
-			$name    = $table->get_name();
-			$deleted = $wpdb->delete( $wpdb->$name, array( 'id' => $entity->get_id() ), array( $table->get_columns()['id']->get_format() ) );
+			$deleted = $wpdb->delete( self::table_name( $table ), array( 'id' => $entity->get_id() ), array( $table->get_columns()['id']->get_format() ) );
 			if ( $deleted ) {
 				return $entity;
 			} else {
@@ -166,9 +180,9 @@ class EntityManager {
 			$data  = array();
 			$types = array();
 			foreach ( $table->get_columns() as $key => $column ) {
-				if ( $key != 'id' ) {
+				if ( $key !== 'id' ) {
 					$method = 'get_' . $column->get_name();
-					if ( $entity->$method() != null ) {
+					if ( $entity->$method() !== null ) {
 						$data[ $key ] = $entity->$method();
 						$types[]      = $column->get_format();
 					}
@@ -176,9 +190,7 @@ class EntityManager {
 			}
 			unset( $data['id'] );
 
-			$name = $table->get_name();
-
-			$inserted = $wpdb->insert( $wpdb->$name, $data, $types );
+			$inserted = $wpdb->insert( self::table_name( $table ), $data, $types );
 			if ( $inserted ) {
 				$entity->set_id( $wpdb->insert_id );
 				$entity->set_state( 'existing' );
@@ -205,7 +217,7 @@ class EntityManager {
 			$data  = array();
 			$types = array();
 			foreach ( $table->get_columns() as $key => $column ) {
-				if ( $key != 'id' ) {
+				if ( $key !== 'id' ) {
 					$method = 'get_' . $column->get_name();
 					if ( $entity->$method() !== null ) {
 						$data[ $key ] = $entity->$method();
@@ -214,8 +226,7 @@ class EntityManager {
 				}
 			}
 			unset( $data['id'] );
-			$name    = $table->get_name();
-			$updated = $wpdb->update( $wpdb->$name, $data, array( 'id' => $entity->get_id() ), $types, array( $table->get_columns()['id']->get_format() ) );
+			$updated = $wpdb->update( self::table_name( $table ), $data, array( 'id' => $entity->get_id() ), $types, array( $table->get_columns()['id']->get_format() ) );
 
 			if ( $updated ) {
 				return $entity;
@@ -246,14 +257,14 @@ class EntityManager {
 	 * @return array|null
 	 * @throws \ReflectionException When error.
 	 */
-	public function findAll( array $where = null, array $order = null, int $limit = null, int $page = null ): ?array {
+	public function findAll( ?array $where = null, ?array $order = null, ?int $limit = null, ?int $page = null ): ?array {
 		global $wpdb;
 		$class = $this->entity_name;
 		$table = Annotations::get_table_annotations( $class );
 		if ( ! empty( $table ) ) {
-			$name = $table->get_name();
+			$name = self::table_name( $table );
 
-			$sql = "SELECT * FROM {$wpdb->$name}";
+			$sql = "SELECT * FROM {$name}";
 
 			$where_s = '';
 			if ( $where && is_array( $where ) ) {
@@ -261,7 +272,7 @@ class EntityManager {
 				$i       = 0;
 				foreach ( $where as $key => $value ) {
 					if ( array_key_exists( 'operator', $value ) ) {
-						if ( $value['operator'] != 'LIKE' ) {
+						if ( $value['operator'] !== 'LIKE' ) {
 							$where_s .= $wpdb->prepare( $key . ' ' . $value['operator'] . ' ' . $value['type'], $value['value'] );
 						} else {
 							$where_s .= $wpdb->prepare( $key . ' LIKE ' . $value['type'], '%' . $value['value'] . '%' );
@@ -269,7 +280,7 @@ class EntityManager {
 					} else {
 						$where_s .= $wpdb->prepare( $key . ' = ' . $value['type'], $value['value'] );
 					}
-					if ( $i != count( $where ) - 1 ) {
+					if ( $i !== count( $where ) - 1 ) {
 						$where_s .= ' AND ';
 					}
 					$i ++;
@@ -282,7 +293,7 @@ class EntityManager {
 				$i       = 0;
 				foreach ( $order as $key => $type ) {
 					$order_s .= $key . ' ' . $type;
-					if ( $i != count( $order ) - 1 ) {
+					if ( $i !== count( $order ) - 1 ) {
 						$order_s .= ', ';
 					}
 					$i ++;
@@ -290,8 +301,8 @@ class EntityManager {
 			}
 
 			$limit_s = '';
-			if ( $limit != null && is_int( $limit ) ) {
-				if ( $page != null && is_int( $page ) ) {
+			if ( $limit !== null && is_int( $limit ) ) {
+				if ( $page !== null && is_int( $page ) ) {
 					$offset  = ( ( $page - 1 ) * $limit );
 					$limit_s = ' LIMIT ' . $offset . ', ' . $limit;
 				} else {
@@ -330,14 +341,14 @@ class EntityManager {
 	 *
 	 * @throws \ReflectionException When error.
 	 */
-	public function count( array $where = null ): int {
+	public function count( ?array $where = null ): int {
 		global $wpdb;
 		$class = $this->entity_name;
 		$table = Annotations::get_table_annotations( $class );
 		if ( ! empty( $table ) ) {
-			$name = $table->get_name();
+			$name = self::table_name( $table );
 
-			$sql = "SELECT * FROM {$wpdb->$name}";
+			$sql = "SELECT COUNT(*) FROM {$name}";
 
 			$where_s = '';
 			if ( $where && is_array( $where ) ) {
@@ -345,7 +356,7 @@ class EntityManager {
 				$i       = 0;
 				foreach ( $where as $key => $value ) {
 					if ( array_key_exists( 'operator', $value ) ) {
-						if ( $value['operator'] != 'LIKE' ) {
+						if ( $value['operator'] !== 'LIKE' ) {
 							$where_s .= $wpdb->prepare( $key . ' ' . $value['operator'] . ' ' . $value['type'], $value['value'] );
 						} else {
 							$where_s .= $wpdb->prepare( $key . ' LIKE ' . $value['type'], '%' . $value['value'] . '%' );
@@ -353,7 +364,7 @@ class EntityManager {
 					} else {
 						$where_s .= $wpdb->prepare( $key . ' = ' . $value['type'], $value['value'] );
 					}
-					if ( $i != count( $where ) - 1 ) {
+					if ( $i !== count( $where ) - 1 ) {
 						$where_s .= ' AND ';
 					}
 					$i ++;
@@ -361,12 +372,8 @@ class EntityManager {
 			}
 
 			$sql = $sql . $where_s;
-			$res = $wpdb->get_results( $sql );
 
-
-			if ( ! empty( $res ) ) {
-				return count( $res );
-			}
+			return (int) $wpdb->get_var( $sql );
 		}
 
 		return 0;
@@ -386,8 +393,8 @@ class EntityManager {
 		$class = $this->entity_name;
 		$table = Annotations::get_table_annotations( $class );
 		if ( ! empty( $table ) ) {
-			$name = $table->get_name();
-			$sql  = $wpdb->prepare( "SELECT * FROM {$wpdb->$name} WHERE id = %d LIMIT 1", $id );
+			$name = self::table_name( $table );
+			$sql  = $wpdb->prepare( "SELECT * FROM {$name} WHERE id = %d LIMIT 1", $id );
 			$res  = $wpdb->get_results( $sql );
 
 			if ( ! empty( $res ) ) {
@@ -420,10 +427,10 @@ class EntityManager {
 		$table = Annotations::get_table_annotations( $class );
 		if ( ! empty( $table ) ) {
 
-			$name = $table->get_name();
+			$name = self::table_name( $table );
 
 			if ( array_key_exists( $column, $table->get_columns() ) ) {
-				$sql = $wpdb->prepare( "SELECT * FROM {$wpdb->$name} WHERE {$column} = {$table->get_columns()[$column]->get_format()} LIMIT 1", $value );
+				$sql = $wpdb->prepare( "SELECT * FROM {$name} WHERE {$column} = {$table->get_columns()[$column]->get_format()} LIMIT 1", $value );
 				$res = $wpdb->get_results( $sql );
 
 				if ( ! empty( $res ) ) {
@@ -451,8 +458,8 @@ class EntityManager {
 		$class = $this->entity_name;
 		$table = Annotations::get_table_annotations( $class );
 		if ( ! empty( $table ) ) {
-			$name = $table->get_name();
-			$sql  = "TRUNCATE {$wpdb->$name}";
+			$name = self::table_name( $table );
+			$sql  = "TRUNCATE {$name}";
 			$res  = $wpdb->query( $sql );
 			if ( $res ) {
 				return true;

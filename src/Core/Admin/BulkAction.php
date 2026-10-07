@@ -67,7 +67,7 @@ abstract class BulkAction {
 	 * Prepare action to run.
 	 */
 	public function action(): void {
-		if ( ! isset( $_GET['post_type'] ) || $_GET['post_type'] != 'shop_order' ) {
+		if ( ! isset( $_GET['post_type'] ) || $_GET['post_type'] !== 'shop_order' ) {
 			return;
 		}
 		if ( isset( $_GET['action'] ) && $_GET['action'] === $this->id ) {
@@ -76,7 +76,7 @@ abstract class BulkAction {
 				return;
 			}
 
-			$data = $_REQUEST['post'];
+			$data = array_map( 'absint', (array) ( $_REQUEST['post'] ?? [] ) );
 			$this->do_action( $data );
 		}
 	}

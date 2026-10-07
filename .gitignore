@@ -1,3 +1,7 @@
 .idea
 .vs_code
+.vscode
+.ai-data
+.playwright-mcp
+.playwright-tests
 vendor

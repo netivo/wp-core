@@ -64,7 +64,7 @@ abstract class TermMeta {
 		$obj  = new ReflectionClass( $this );
 		$data = $obj->getAttributes();
 		foreach ( $data as $attribute ) {
-			if ( $attribute->getName() == 'Netivo\Attributes\View' ) {
+			if ( $attribute->getName() === 'Netivo\Attributes\View' ) {
 				$this->view_name = $attribute->getArguments()[0];
 			}
 		}
@@ -107,7 +107,7 @@ abstract class TermMeta {
 	 * @throws Exception If the corresponding view file does not exist.
 	 */
 	public function display_add(): void {
-		wp_nonce_field( 'save_' . self::$META_FIELD_NAME, self::$META_FIELD_NAME . '_nonce' );
+		wp_nonce_field( 'save_' . static::$META_FIELD_NAME, static::$META_FIELD_NAME . '_nonce' );
 
 		$filename = $this->path . '/admin/term-meta/' . $this->view_name . '.php';
 
@@ -129,7 +129,7 @@ abstract class TermMeta {
 	 * @throws Exception If the view file for the admin action is not found.
 	 */
 	public function display_edit(): void {
-		wp_nonce_field( 'save_' . self::$META_FIELD_NAME, self::$META_FIELD_NAME . '_nonce' );
+		wp_nonce_field( 'save_' . static::$META_FIELD_NAME, static::$META_FIELD_NAME . '_nonce' );
 
 		$filename = $this->path . '/admin/term-meta/' . $this->view_name . '-edit.php';
 
@@ -149,11 +149,15 @@ abstract class TermMeta {
 	 * @return int The term ID after processing.
 	 */
 	public function do_save( int $term_id, ?int $tt_id = null ): int {
-		if ( ! isset( $_POST[ self::$META_FIELD_NAME . '_nonce' ] ) ) {
+		if ( ! isset( $_POST[ static::$META_FIELD_NAME . '_nonce' ] ) ) {
 			return $term_id;
 		}
 
-		if ( ! wp_verify_nonce( sanitize_text_field( $_POST[ self::$META_FIELD_NAME . '_nonce' ] ), 'save_' . self::$META_FIELD_NAME ) ) {
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST[ static::$META_FIELD_NAME . '_nonce' ] ) ), 'save_' . static::$META_FIELD_NAME ) ) {
+			return $term_id;
+		}
+
+		if ( ! current_user_can( 'edit_term', $term_id ) ) {
 			return $term_id;
 		}
 
